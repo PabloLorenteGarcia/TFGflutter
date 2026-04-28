@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "891140578455",
+    "project_id": "tfgplantas",
+    "storage_bucket": "tfgplantas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:891140578455:android:6a55b20f9ac18ff8baddd2",
+        "android_client_info": {
+          "package_name": "com.plantcare.plantcare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDm7mtgKKki3AKRYVDnH4K8z9YifYep7oo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "4"
+}
