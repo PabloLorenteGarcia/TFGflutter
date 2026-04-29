@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:plantcare/core/constants/firebase_options.dart';
 import 'package:plantcare/domain/entities/catalog_plant.dart';
 import 'package:plantcare/domain/entities/enums.dart';
+import 'package:plantcare/domain/entities/plant.dart';
 
 /// Servicio para gestionar Firebase Firestore
 class FirebaseService {

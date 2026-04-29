@@ -17,6 +17,9 @@ class AuthProvider extends ChangeNotifier {
   String? get userId => _user?.uid;
   String? get userEmail => _user?.email;
 
+  /// Stream de cambios de autenticación para GoRouter
+  Stream<User?> get authStateChanges => _authService.authStateChanges;
+
   /// Inicializa el provider y escucha cambios de autenticación
   AuthProvider() {
     _authService.authStateChanges.listen((user) {

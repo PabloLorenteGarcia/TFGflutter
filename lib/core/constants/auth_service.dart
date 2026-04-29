@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:plantcare/core/constants/firebase_options.dart';
 
 /// Servicio para gestionar la autenticación de usuarios con Firebase
 class AuthService {

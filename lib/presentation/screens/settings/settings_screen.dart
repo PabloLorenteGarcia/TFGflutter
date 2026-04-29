@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:plantcare/core/theme/app_theme.dart';
 import 'package:plantcare/presentation/providers/settings_provider.dart';
+import 'package:plantcare/presentation/providers/auth_provider.dart';
 
 /// Pantalla de configuración de la aplicación
 class SettingsScreen extends StatelessWidget {
@@ -59,6 +61,14 @@ class SettingsScreen extends StatelessWidget {
                 trailing: const Icon(Icons.help_outline),
                 onTap: () => _showHelpDialog(context),
               ),
+              const Divider(),
+
+              // Cerrar sesión
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+                onTap: () => _confirmSignOut(context),
+              ),
               const SizedBox(height: 24),
 
               // Créditos
@@ -77,6 +87,34 @@ class SettingsScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// Confirma y cierra sesión
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await context.read<AuthProvider>().signOut();
+      if (context.mounted) {
+        context.go('/auth');
+      }
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
