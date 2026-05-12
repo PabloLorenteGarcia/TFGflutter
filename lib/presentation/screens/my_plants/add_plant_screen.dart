@@ -7,6 +7,9 @@ import 'package:plantcare/domain/entities/enums.dart';
 import 'package:plantcare/domain/entities/plant.dart';
 import 'package:plantcare/presentation/providers/plant_provider.dart';
 import 'package:plantcare/presentation/providers/catalog_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 /// Pantalla para añadir una nueva planta
 class AddPlantScreen extends StatefulWidget {
@@ -33,6 +36,10 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   double _maxTemp = 25;
   bool _notificationsEnabled = true;
 
+  File? _selectedImage;
+  String? _uploadedImageUrl;
+  bool _isUploadingImage = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,8 +50,14 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     }
   }
 
-  void _loadFromCatalog() {
+  void _loadFromCatalog() async {
     final catalogProvider = context.read<CatalogProvider>();
+    
+    // Si el catálogo no está cargado, cargarlo
+    if (catalogProvider.allPlants.isEmpty) {
+      await catalogProvider.loadPlants();
+    }
+    
     final catalogPlant = catalogProvider.getPlantById(widget.catalogPlantId!);
     if (catalogPlant != null) {
       setState(() {
@@ -57,6 +70,53 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         _minTemp = catalogPlant.minTemp;
         _maxTemp = catalogPlant.maxTemp;
       });
+    } else {
+      // Mostrar mensaje si la planta del catálogo no se encuentra
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Planta no encontrada en el catálogo'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        context.pop(); // Volver atrás
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _uploadImage(String plantId) async {
+    if (_selectedImage == null) return;
+
+    setState(() => _isUploadingImage = true);
+
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('plant_images')
+          .child('$plantId.jpg');
+
+      await storageRef.putFile(_selectedImage!);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      setState(() {
+        _uploadedImageUrl = downloadUrl;
+        _isUploadingImage = false;
+      });
+    } catch (e) {
+      setState(() => _isUploadingImage = false);
+      // Error will be handled in _savePlant if needed
+      rethrow;
     }
   }
 
@@ -73,7 +133,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Añadir Planta'),
+        title: Text(widget.catalogPlantId != null ? 'Añadir Planta' : 'Crear Planta Personalizada'),
       ),
       body: Form(
         key: _formKey,
@@ -94,6 +154,43 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Imagen
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Imagen (opcional)',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Seleccionar imagen'),
+                    ),
+                    const SizedBox(width: 16),
+                    if (_selectedImage != null)
+                      Expanded(
+                        child: Text(
+                          'Imagen seleccionada',
+                          style: TextStyle(color: AppColors.success),
+                        ),
+                      ),
+                  ],
+                ),
+                if (_isUploadingImage)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -234,7 +331,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
               subtitle: const Text('Recibe recordatorios cuando necesite agua'),
               value: _notificationsEnabled,
               onChanged: (value) => setState(() => _notificationsEnabled = value),
-              activeColor: AppColors.primary,
             ),
             const SizedBox(height: 32),
 
@@ -275,42 +371,84 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     );
   }
 
-  void _savePlant() {
-    if (_formKey.currentState!.validate()) {
-      final now = DateTime.now();
-      final plant = Plant(
-        id: const Uuid().v4(),
-        name: _nameController.text.trim(),
-        species: _speciesController.text.trim().isNotEmpty 
-            ? _speciesController.text.trim() 
-            : null,
-        location: _locationController.text.trim().isNotEmpty 
-            ? _locationController.text.trim() 
-            : null,
-        lightRequirement: _lightRequirement,
-        wateringFrequency: _wateringFrequency,
-        wateringAmount: _wateringAmount,
-        minTemp: _minTemp,
-        maxTemp: _maxTemp,
-        humidityLevel: _humidityLevel,
-        notificationsEnabled: _notificationsEnabled,
-        createdAt: now,
-        nextWatering: now.add(Duration(days: _wateringFrequency.days)),
-        notes: _notesController.text.trim().isNotEmpty 
-            ? _notesController.text.trim() 
-            : null,
-        catalogPlantId: widget.catalogPlantId,
-      );
+  void _savePlant() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      context.read<PlantProvider>().addPlant(plant);
-      context.pop();
+    // Mostrar indicador de carga
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Guardando planta...'),
+        duration: Duration(seconds: 5),
+      ),
+    );
+
+    final now = DateTime.now();
+    final plantId = const Uuid().v4();
+
+    // Upload image if selected
+    if (_selectedImage != null) {
+      try {
+        await _uploadImage(plantId);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al subir imagen: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    final plant = Plant(
+      id: plantId,
+      name: _nameController.text.trim(),
+      species: _speciesController.text.trim().isNotEmpty 
+          ? _speciesController.text.trim() 
+          : null,
+      imagePath: _uploadedImageUrl, // Use uploaded URL
+      location: _locationController.text.trim().isNotEmpty 
+          ? _locationController.text.trim() 
+          : null,
+      lightRequirement: _lightRequirement,
+      wateringFrequency: _wateringFrequency,
+      wateringAmount: _wateringAmount,
+      minTemp: _minTemp,
+      maxTemp: _maxTemp,
+      humidityLevel: _humidityLevel,
+      notificationsEnabled: _notificationsEnabled,
+      createdAt: now,
+      nextWatering: now.add(Duration(days: _wateringFrequency.days)),
+      notes: _notesController.text.trim().isNotEmpty 
+          ? _notesController.text.trim() 
+          : null,
+      catalogPlantId: widget.catalogPlantId,
+    );
+
+    // Esperar a que se complete el guardado
+    try {
+      await context.read<PlantProvider>().addPlant(plant);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${plant.name} añadida correctamente'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      if (mounted) {
+        context.pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${plant.name} añadida correctamente'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 }

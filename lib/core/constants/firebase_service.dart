@@ -92,35 +92,60 @@ class FirebaseService {
 
   /// Obtiene la colección de plantas de un usuario específico
   CollectionReference _getUserPlantsCollection(String userId) {
-    return _firestore!.collection('users').doc(userId).collection('plants');
+    return FirebaseFirestore.instance.collection('users').doc(userId).collection('plants');
   }
 
   /// Obtiene todas las plantas de un usuario
   Future<List<Plant>> getUserPlants(String userId) async {
-    final snapshot = await _getUserPlantsCollection(userId).get();
-    return snapshot.docs.map((doc) => _plantFromFirestore(doc)).toList();
+    try {
+      final snapshot = await _getUserPlantsCollection(userId).get();
+      return snapshot.docs.map((doc) => _plantFromFirestore(doc)).toList();
+    } catch (e) {
+      print('Error al obtener plantas del usuario: $e');
+      rethrow;
+    }
   }
 
   /// Agrega una planta al usuario
   Future<void> addUserPlant(String userId, Plant plant) async {
-    await _getUserPlantsCollection(userId).doc(plant.id).set(plant.toMap());
+    try {
+      await _getUserPlantsCollection(userId).doc(plant.id).set(plant.toMap());
+    } catch (e) {
+      print('Error al guardar planta: $e');
+      rethrow;
+    }
   }
 
   /// Actualiza una planta del usuario
   Future<void> updateUserPlant(String userId, Plant plant) async {
-    await _getUserPlantsCollection(userId).doc(plant.id).update(plant.toMap());
+    try {
+      await _getUserPlantsCollection(userId).doc(plant.id).update(plant.toMap());
+    } catch (e) {
+      print('Error al actualizar planta: $e');
+      rethrow;
+    }
   }
 
   /// Elimina una planta del usuario
   Future<void> deleteUserPlant(String userId, String plantId) async {
-    await _getUserPlantsCollection(userId).doc(plantId).delete();
+    try {
+      await _getUserPlantsCollection(userId).doc(plantId).delete();
+    } catch (e) {
+      print('Error al eliminar planta: $e');
+      rethrow;
+    }
   }
 
   /// Obtiene una planta específica del usuario
   Future<Plant?> getUserPlantById(String userId, String plantId) async {
-    final doc = await _getUserPlantsCollection(userId).doc(plantId).get();
-    if (!doc.exists) return null;
-    return _plantFromFirestore(doc);
+    try {
+      final doc = await _getUserPlantsCollection(userId).doc(plantId).get();
+      if (!doc.exists) return null;
+      return _plantFromFirestore(doc);
+    } catch (e) {
+      print('Error al obtener planta: $e');
+      rethrow;
+    }
   }
 
   // ==================== HELPERS ====================

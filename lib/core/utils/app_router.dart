@@ -124,21 +124,21 @@ class AppRouter {
           builder: (context, state) => const QuizResultScreen(),
         ),
         GoRoute(
-          path: '/my-plants/:id',
-          name: 'plantDetail',
-          parentNavigatorKey: _rootNavigatorKey,
-          builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return PlantDetailScreen(plantId: id);
-          },
-        ),
-        GoRoute(
           path: '/my-plants/add',
           name: 'addPlant',
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             final catalogPlantId = state.uri.queryParameters['fromCatalog'];
             return AddPlantScreen(catalogPlantId: catalogPlantId);
+          },
+        ),
+        GoRoute(
+          path: '/my-plants/:id',
+          name: 'plantDetail',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return PlantDetailScreen(plantId: id);
           },
         ),
         GoRoute(

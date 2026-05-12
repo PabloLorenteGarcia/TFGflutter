@@ -34,12 +34,14 @@ class PlantCareApp extends StatefulWidget {
 
 class _PlantCareAppState extends State<PlantCareApp> {
   late final AuthProvider _authProvider;
+  late final PlantProvider _plantProvider;
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
     _authProvider = AuthProvider();
+    _plantProvider = PlantProvider();
     _router = AppRouter.createRouter(_authProvider);
     
     // Sincronizar auth con plant provider
@@ -48,9 +50,9 @@ class _PlantCareAppState extends State<PlantCareApp> {
 
   void _onAuthChanged() {
     if (_authProvider.isAuthenticated) {
-      context.read<PlantProvider>().setUserId(_authProvider.userId);
+      _plantProvider.setUserId(_authProvider.userId);
     } else {
-      context.read<PlantProvider>().setUserId(null);
+      _plantProvider.setUserId(null);
     }
   }
 
@@ -66,7 +68,7 @@ class _PlantCareAppState extends State<PlantCareApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _authProvider),
-        ChangeNotifierProvider(create: (_) => PlantProvider()),
+        ChangeNotifierProvider.value(value: _plantProvider),
         ChangeNotifierProvider(create: (_) => CatalogProvider()..loadPlants()),
         ChangeNotifierProvider(create: (_) => QuizProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
