@@ -11,9 +11,11 @@ import 'package:plantcare/presentation/screens/my_plants/my_plants_screen.dart';
 import 'package:plantcare/presentation/screens/my_plants/plant_detail_screen.dart';
 import 'package:plantcare/presentation/screens/my_plants/add_plant_screen.dart';
 import 'package:plantcare/presentation/screens/my_plants/edit_plant_screen.dart';
+import 'package:plantcare/presentation/screens/catalog/plant_identification_result_screen.dart';
 import 'package:plantcare/presentation/screens/settings/settings_screen.dart';
-import 'package:plantcare/presentation/widgets/main_scaffold.dart';
 import 'package:plantcare/presentation/widgets/auth_screen.dart';
+import 'package:plantcare/presentation/widgets/main_scaffold.dart';
+import 'package:plantcare/core/utils/plant_identification_service.dart';
 
 /// Stream que convierte cambios de estado en un Stream para GoRouter
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -101,7 +103,7 @@ class AppRouter {
             GoRoute(
               path: '/settings',
               name: 'settings',
-              pageBuilder: (context, state) => const NoTransitionPage(
+              pageBuilder: (context, state) => NoTransitionPage(
                 child: SettingsScreen(),
               ),
             ),
@@ -148,6 +150,15 @@ class AppRouter {
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return EditPlantScreen(plantId: id);
+          },
+        ),
+        GoRoute(
+          path: '/plant-identification-result',
+          name: 'plantIdentificationResult',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final result = state.extra as PlantIdentificationResult?;
+            return PlantIdentificationResultScreen(result: result ?? PlantIdentificationResult.error('No se encontraron resultados'));
           },
         ),
       ],

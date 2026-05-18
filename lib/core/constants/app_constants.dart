@@ -33,6 +33,11 @@ class AppConstants {
   // Nombres de tablas en la base de datos
   static const String plantsTable = 'plants';
   static const String catalogTable = 'catalog_plants';
+  
+  // API de Plant.id (Pl@ntNet)
+  static const String plantNetApiKey = '2b10bT6FVImRsZ7G6ppf8p72O';
+  static const String plantNetBaseUrl = 'https://my-api.plantnet.org';
+  static const String plantNetApiVersion = 'v2';
 }
 
 /// Claves para argumentos de navegación

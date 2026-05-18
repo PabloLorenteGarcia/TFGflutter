@@ -7,6 +7,7 @@ import 'package:plantcare/domain/entities/enums.dart';
 import 'package:plantcare/domain/entities/plant.dart';
 import 'package:plantcare/presentation/providers/plant_provider.dart';
 import 'package:plantcare/presentation/providers/catalog_provider.dart';
+import 'package:plantcare/core/utils/plant_identification_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -39,6 +40,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   File? _selectedImage;
   String? _uploadedImageUrl;
   bool _isUploadingImage = false;
+  bool _isIdentifyingPlant = false;
 
   @override
   void initState() {
@@ -120,6 +122,64 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     }
   }
 
+  Future<void> _identifyPlant() async {
+    if (_selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona una imagen primero'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isIdentifyingPlant = true);
+
+    try {
+      final service = PlantIdentificationService();
+      final result = await service.identifyPlant(
+        images: [_selectedImage!],
+        organs: ['auto'], // Detección automática del órgano
+      );
+
+      setState(() => _isIdentifyingPlant = false);
+
+      if (result.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${result.error}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      // Navegar a la pantalla de resultados
+      final selectedSpecies = await context.push<IdentifiedSpecies>(
+        '/plant-identification-result',
+        extra: result,
+      );
+
+      // Si el usuario seleccionó una especie, rellenar los campos
+      if (selectedSpecies != null && mounted) {
+        setState(() {
+          _nameController.text = selectedSpecies.commonNames.isNotEmpty
+              ? selectedSpecies.commonNames.first
+              : selectedSpecies.scientificName;
+          _speciesController.text = selectedSpecies.scientificName;
+        });
+      }
+    } catch (e) {
+      setState(() => _isIdentifyingPlant = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al identificar la planta: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -175,17 +235,30 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       icon: const Icon(Icons.photo_library),
                       label: const Text('Seleccionar imagen'),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     if (_selectedImage != null)
-                      Expanded(
-                        child: Text(
-                          'Imagen seleccionada',
-                          style: TextStyle(color: AppColors.success),
-                        ),
+                      ElevatedButton.icon(
+                        onPressed: _isIdentifyingPlant ? null : _identifyPlant,
+                        icon: _isIdentifyingPlant
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.search),
+                        label: const Text('Identificar planta'),
                       ),
                   ],
                 ),
-                if (_isUploadingImage)
+                if (_selectedImage != null && !_isIdentifyingPlant)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Imagen seleccionada - puedes identificar la planta',
+                      style: TextStyle(color: AppColors.success),
+                    ),
+                  ),
+                if (_isIdentifyingPlant)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: LinearProgressIndicator(),

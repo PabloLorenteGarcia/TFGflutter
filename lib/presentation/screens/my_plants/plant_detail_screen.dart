@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:plantcare/core/theme/app_theme.dart';
-import 'package:plantcare/domain/entities/enums.dart';
 import 'package:plantcare/presentation/providers/plant_provider.dart';
 
 /// Pantalla de detalle de una planta del usuario
