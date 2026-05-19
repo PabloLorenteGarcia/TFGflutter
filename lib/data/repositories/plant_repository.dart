@@ -10,9 +10,9 @@ class PlantRepository {
     await _db.insertPlant(plant.toMap());
   }
 
-  /// Obtiene todas las plantas del usuario
-  Future<List<Plant>> getAllPlants() async {
-    final maps = await _db.getAllPlants();
+  /// Obtiene todas las plantas del usuario o las plantas locales sin usuario
+  Future<List<Plant>> getAllPlants({String? userId}) async {
+    final maps = await _db.getAllPlants(userId: userId);
     return maps.map((map) => Plant.fromMap(map)).toList();
   }
 

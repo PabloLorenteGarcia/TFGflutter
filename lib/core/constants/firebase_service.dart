@@ -99,7 +99,9 @@ class FirebaseService {
   Future<List<Plant>> getUserPlants(String userId) async {
     try {
       final snapshot = await _getUserPlantsCollection(userId).get();
-      return snapshot.docs.map((doc) => _plantFromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => _plantFromFirestore(doc, userId))
+          .toList();
     } catch (e) {
       print('Error al obtener plantas del usuario: $e');
       rethrow;
@@ -141,7 +143,7 @@ class FirebaseService {
     try {
       final doc = await _getUserPlantsCollection(userId).doc(plantId).get();
       if (!doc.exists) return null;
-      return _plantFromFirestore(doc);
+      return _plantFromFirestore(doc, userId);
     } catch (e) {
       print('Error al obtener planta: $e');
       rethrow;
@@ -151,7 +153,7 @@ class FirebaseService {
   // ==================== HELPERS ====================
 
   /// Convierte un documento de Firestore a Plant del usuario
-  Plant _plantFromFirestore(DocumentSnapshot doc) {
+  Plant _plantFromFirestore(DocumentSnapshot doc, [String? userId]) {
     final data = doc.data() as Map<String, dynamic>;
     return Plant(
       id: data['id'] as String,
@@ -178,6 +180,7 @@ class FirebaseService {
       createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int),
       notes: data['notes'] as String?,
       catalogPlantId: data['catalogPlantId'] as String?,
+      userId: userId,
     );
   }
 

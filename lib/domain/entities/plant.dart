@@ -20,6 +20,7 @@ class Plant {
   final DateTime createdAt;
   final String? notes;
   final String? catalogPlantId; // Referencia a planta del catálogo
+  final String? userId; // Usuario propietario de la planta
 
   Plant({
     required this.id,
@@ -40,6 +41,7 @@ class Plant {
     required this.createdAt,
     this.notes,
     this.catalogPlantId,
+    this.userId,
   });
 
   /// Crea una copia con los campos actualizados
@@ -62,6 +64,7 @@ class Plant {
     DateTime? createdAt,
     String? notes,
     String? catalogPlantId,
+    String? userId,
   }) {
     return Plant(
       id: id ?? this.id,
@@ -82,6 +85,7 @@ class Plant {
       createdAt: createdAt ?? this.createdAt,
       notes: notes ?? this.notes,
       catalogPlantId: catalogPlantId ?? this.catalogPlantId,
+      userId: userId ?? this.userId,
     );
   }
 
@@ -106,6 +110,7 @@ class Plant {
       'createdAt': createdAt.millisecondsSinceEpoch,
       'notes': notes,
       'catalogPlantId': catalogPlantId,
+      'userId': userId,
     };
   }
 
@@ -136,6 +141,7 @@ class Plant {
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
       notes: map['notes'] as String?,
       catalogPlantId: map['catalogPlantId'] as String?,
+      userId: map['userId'] as String?,
     );
   }
 

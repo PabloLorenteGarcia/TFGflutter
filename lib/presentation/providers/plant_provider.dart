@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:plantcare/data/repositories/firebase_catalog_repository.dart';
+import 'package:plantcare/data/repositories/plant_repository.dart';
 import 'package:plantcare/domain/entities/plant.dart';
 
 /// Provider para gestionar el estado de las plantas del usuario
 class PlantProvider extends ChangeNotifier {
-  final FirebaseCatalogRepository _repository = FirebaseCatalogRepository();
+  final FirebaseCatalogRepository _remoteRepository = FirebaseCatalogRepository();
+  final PlantRepository _localRepository = PlantRepository();
   String? _userId;
   
   List<Plant> _plants = [];
@@ -35,14 +37,50 @@ class PlantProvider extends ChangeNotifier {
 
   /// Carga todas las plantas desde la base de datos
   Future<void> loadPlants() async {
-    if (_userId == null) return;
-    
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _plants = await _repository.getUserPlants(_userId!);
+      final Map<String, Plant> mergedPlants = {};
+
+      if (_userId != null) {
+        final localPlants = await _localRepository.getAllPlants(userId: _userId);
+        for (final plant in localPlants) {
+          mergedPlants[plant.id] = plant;
+        }
+
+        final remotePlants = await _remoteRepository.getUserPlants(_userId!);
+        for (final remotePlant in remotePlants) {
+          final plantWithUserId = remotePlant.userId == _userId
+              ? remotePlant
+              : remotePlant.copyWith(userId: _userId);
+          mergedPlants[plantWithUserId.id] = plantWithUserId;
+          await _localRepository.addPlant(plantWithUserId);
+        }
+
+        for (final localPlant in localPlants) {
+          final existsRemotely = remotePlants.any((p) => p.id == localPlant.id);
+          if (!existsRemotely) {
+            final labeledPlant = localPlant.userId == _userId
+                ? localPlant
+                : localPlant.copyWith(userId: _userId);
+            await _remoteRepository.addUserPlant(_userId!, labeledPlant);
+            if (localPlant.userId != _userId) {
+              await _localRepository.updatePlant(labeledPlant);
+              mergedPlants[labeledPlant.id] = labeledPlant;
+            }
+          }
+        }
+      } else {
+        final localPlants = await _localRepository.getAllPlants(userId: null);
+        for (final plant in localPlants) {
+          mergedPlants[plant.id] = plant;
+        }
+      }
+
+      _plants = mergedPlants.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
       _error = 'Error al cargar las plantas: $e';
     } finally {
@@ -53,24 +91,37 @@ class PlantProvider extends ChangeNotifier {
 
   /// Añade una nueva planta
   Future<void> addPlant(Plant plant) async {
-    if (_userId == null) return;
-    
+    final plantToSave = _userId != null ? plant.copyWith(userId: _userId) : plant;
+
     try {
-      await _repository.addUserPlant(_userId!, plant);
-      _plants.insert(0, plant);
+      await _localRepository.addPlant(plantToSave);
+      _plants.insert(0, plantToSave);
       notifyListeners();
     } catch (e) {
-      _error = 'Error al añadir la planta: $e';
+      _error = 'Error al añadir la planta localmente: $e';
       notifyListeners();
+      return;
+    }
+
+    if (_userId != null) {
+      try {
+        await _remoteRepository.addUserPlant(_userId!, plantToSave);
+      } catch (e) {
+        // La planta ya se guarda localmente, pero si falla la sincronización remota
+        // se mantiene en la app y se podrá intentar sincronizar después.
+        _error = 'Planta guardada localmente, pero no se pudo sincronizar: $e';
+        notifyListeners();
+      }
     }
   }
 
   /// Actualiza una planta existente
   Future<void> updatePlant(Plant plant) async {
-    if (_userId == null) return;
-    
     try {
-      await _repository.updateUserPlant(_userId!, plant);
+      await _localRepository.updatePlant(plant);
+      if (_userId != null) {
+        await _remoteRepository.updateUserPlant(_userId!, plant);
+      }
       final index = _plants.indexWhere((p) => p.id == plant.id);
       if (index != -1) {
         _plants[index] = plant;
@@ -84,10 +135,11 @@ class PlantProvider extends ChangeNotifier {
 
   /// Elimina una planta
   Future<void> deletePlant(String id) async {
-    if (_userId == null) return;
-    
     try {
-      await _repository.deleteUserPlant(_userId!, id);
+      await _localRepository.deletePlant(id);
+      if (_userId != null) {
+        await _remoteRepository.deleteUserPlant(_userId!, id);
+      }
       _plants.removeWhere((p) => p.id == id);
       notifyListeners();
     } catch (e) {
@@ -98,8 +150,6 @@ class PlantProvider extends ChangeNotifier {
 
   /// Marca una planta como regada
   Future<void> markAsWatered(String id) async {
-    if (_userId == null) return;
-    
     try {
       final index = _plants.indexWhere((p) => p.id == id);
       if (index != -1) {
@@ -109,7 +159,10 @@ class PlantProvider extends ChangeNotifier {
           lastWatered: now,
           nextWatering: plant.calculateNextWatering(),
         );
-        await _repository.updateUserPlant(_userId!, updatedPlant);
+        await _localRepository.updatePlant(updatedPlant);
+        if (_userId != null) {
+          await _remoteRepository.updateUserPlant(_userId!, updatedPlant);
+        }
         _plants[index] = updatedPlant;
         notifyListeners();
       }

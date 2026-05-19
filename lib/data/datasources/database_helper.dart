@@ -22,9 +22,16 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE plants ADD COLUMN userId TEXT');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -48,7 +55,8 @@ class DatabaseHelper {
         notificationsEnabled INTEGER NOT NULL DEFAULT 1,
         createdAt INTEGER NOT NULL,
         notes TEXT,
-        catalogPlantId TEXT
+        catalogPlantId TEXT,
+      userId TEXT
       )
     ''');
 
@@ -298,12 +306,30 @@ class DatabaseHelper {
 
   Future<int> insertPlant(Map<String, dynamic> plant) async {
     final db = await database;
-    return await db.insert('plants', plant);
+    return await db.insert(
+      'plants',
+      plant,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  Future<List<Map<String, dynamic>>> getAllPlants() async {
+  Future<List<Map<String, dynamic>>> getAllPlants({String? userId}) async {
     final db = await database;
-    return await db.query('plants', orderBy: 'createdAt DESC');
+
+    if (userId == null) {
+      return await db.query(
+        'plants',
+        where: 'userId IS NULL',
+        orderBy: 'createdAt DESC',
+      );
+    }
+
+    return await db.query(
+      'plants',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'createdAt DESC',
+    );
   }
 
   Future<Map<String, dynamic>?> getPlantById(String id) async {
