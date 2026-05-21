@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:plantcare/data/repositories/firebase_catalog_repository.dart';
 import 'package:plantcare/data/repositories/plant_repository.dart';
@@ -8,6 +9,9 @@ class PlantProvider extends ChangeNotifier {
   final FirebaseCatalogRepository _remoteRepository = FirebaseCatalogRepository();
   final PlantRepository _localRepository = PlantRepository();
   String? _userId;
+
+  String? get _effectiveUserId =>
+      _userId ?? FirebaseAuth.instance.currentUser?.uid;
   
   List<Plant> _plants = [];
   bool _isLoading = false;
@@ -43,14 +47,21 @@ class PlantProvider extends ChangeNotifier {
 
     try {
       final Map<String, Plant> mergedPlants = {};
+      final currentUserId = _effectiveUserId;
 
-      if (_userId != null) {
-        final localPlants = await _localRepository.getAllPlants(userId: _userId);
-        for (final plant in localPlants) {
+      if (currentUserId != null) {
+        final localPlants = await _localRepository.getAllPlants(userId: currentUserId);
+        final anonymousPlants = await _localRepository.getAllPlants(userId: null);
+
+        for (final plant in [...localPlants, ...anonymousPlants]) {
           mergedPlants[plant.id] = plant;
         }
 
-        final remotePlants = await _remoteRepository.getUserPlants(_userId!);
+        _plants = mergedPlants.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        notifyListeners();
+
+        final remotePlants = await _remoteRepository.getUserPlants(currentUserId);
         for (final remotePlant in remotePlants) {
           final plantWithUserId = remotePlant.userId == _userId
               ? remotePlant
@@ -59,14 +70,14 @@ class PlantProvider extends ChangeNotifier {
           await _localRepository.addPlant(plantWithUserId);
         }
 
-        for (final localPlant in localPlants) {
+        for (final localPlant in [...localPlants, ...anonymousPlants]) {
           final existsRemotely = remotePlants.any((p) => p.id == localPlant.id);
           if (!existsRemotely) {
-            final labeledPlant = localPlant.userId == _userId
+            final labeledPlant = localPlant.userId == currentUserId
                 ? localPlant
-                : localPlant.copyWith(userId: _userId);
-            await _remoteRepository.addUserPlant(_userId!, labeledPlant);
-            if (localPlant.userId != _userId) {
+                : localPlant.copyWith(userId: currentUserId);
+            await _remoteRepository.addUserPlant(currentUserId, labeledPlant);
+            if (localPlant.userId != currentUserId) {
               await _localRepository.updatePlant(labeledPlant);
               mergedPlants[labeledPlant.id] = labeledPlant;
             }
@@ -91,7 +102,8 @@ class PlantProvider extends ChangeNotifier {
 
   /// Añade una nueva planta
   Future<void> addPlant(Plant plant) async {
-    final plantToSave = _userId != null ? plant.copyWith(userId: _userId) : plant;
+    final currentUserId = _effectiveUserId;
+    final plantToSave = currentUserId != null ? plant.copyWith(userId: currentUserId) : plant;
 
     try {
       await _localRepository.addPlant(plantToSave);
@@ -103,14 +115,13 @@ class PlantProvider extends ChangeNotifier {
       return;
     }
 
-    if (_userId != null) {
+    if (currentUserId != null) {
       try {
-        await _remoteRepository.addUserPlant(_userId!, plantToSave);
+        await _remoteRepository.addUserPlant(currentUserId, plantToSave);
       } catch (e) {
-        // La planta ya se guarda localmente, pero si falla la sincronización remota
-        // se mantiene en la app y se podrá intentar sincronizar después.
         _error = 'Planta guardada localmente, pero no se pudo sincronizar: $e';
         notifyListeners();
+        rethrow;
       }
     }
   }
@@ -119,8 +130,9 @@ class PlantProvider extends ChangeNotifier {
   Future<void> updatePlant(Plant plant) async {
     try {
       await _localRepository.updatePlant(plant);
-      if (_userId != null) {
-        await _remoteRepository.updateUserPlant(_userId!, plant);
+      final currentUserId = _effectiveUserId;
+      if (currentUserId != null) {
+        await _remoteRepository.updateUserPlant(currentUserId, plant);
       }
       final index = _plants.indexWhere((p) => p.id == plant.id);
       if (index != -1) {
@@ -137,8 +149,9 @@ class PlantProvider extends ChangeNotifier {
   Future<void> deletePlant(String id) async {
     try {
       await _localRepository.deletePlant(id);
-      if (_userId != null) {
-        await _remoteRepository.deleteUserPlant(_userId!, id);
+      final currentUserId = _effectiveUserId;
+      if (currentUserId != null) {
+        await _remoteRepository.deleteUserPlant(currentUserId, id);
       }
       _plants.removeWhere((p) => p.id == id);
       notifyListeners();
@@ -160,8 +173,9 @@ class PlantProvider extends ChangeNotifier {
           nextWatering: plant.calculateNextWatering(),
         );
         await _localRepository.updatePlant(updatedPlant);
-        if (_userId != null) {
-          await _remoteRepository.updateUserPlant(_userId!, updatedPlant);
+        final currentUserId = _effectiveUserId;
+        if (currentUserId != null) {
+          await _remoteRepository.updateUserPlant(currentUserId, updatedPlant);
         }
         _plants[index] = updatedPlant;
         notifyListeners();

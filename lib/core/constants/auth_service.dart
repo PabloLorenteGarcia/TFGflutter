@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:plantcare/core/constants/firebase_service.dart';
 
 /// Servicio para gestionar la autenticación de usuarios con Firebase
 class AuthService {
   static final AuthService instance = AuthService._init();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseService _firebaseService = FirebaseService.instance;
 
   AuthService._init();
 
@@ -25,7 +28,14 @@ class AuthService {
         email: email,
         password: password,
       );
-      return credential.user;
+      final user = credential.user;
+      if (user != null) {
+        await _firebaseService.createUserDocument(user.uid, {
+          'email': user.email,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      return user;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }

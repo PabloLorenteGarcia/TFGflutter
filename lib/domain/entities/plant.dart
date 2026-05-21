@@ -114,6 +114,30 @@ class Plant {
     };
   }
 
+  Map<String, dynamic> toFirestoreMap() {
+    return {
+      'id': id,
+      'name': name,
+      'species': species,
+      'imagePath': imagePath,
+      'location': location,
+      'lightRequirement': lightRequirement.index,
+      'wateringFrequency': wateringFrequency.index,
+      'wateringAmount': wateringAmount.index,
+      'minTemp': minTemp,
+      'maxTemp': maxTemp,
+      'humidityLevel': humidityLevel.index,
+      'lastWatered': lastWatered?.millisecondsSinceEpoch,
+      'nextWatering': nextWatering?.millisecondsSinceEpoch,
+      'lastSunExposure': lastSunExposure?.millisecondsSinceEpoch,
+      'notificationsEnabled': notificationsEnabled,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'notes': notes,
+      'catalogPlantId': catalogPlantId,
+      'userId': userId,
+    };
+  }
+
   /// Crea una planta desde un mapa de la base de datos
   factory Plant.fromMap(Map<String, dynamic> map) {
     return Plant(
@@ -137,12 +161,19 @@ class Plant {
       lastSunExposure: map['lastSunExposure'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['lastSunExposure'] as int)
           : null,
-      notificationsEnabled: (map['notificationsEnabled'] as int) == 1,
+      notificationsEnabled: _parseNotificationsEnabled(map['notificationsEnabled']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
       notes: map['notes'] as String?,
       catalogPlantId: map['catalogPlantId'] as String?,
       userId: map['userId'] as String?,
     );
+  }
+
+  static bool _parseNotificationsEnabled(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true';
+    return true;
   }
 
   /// Calcula la próxima fecha de riego

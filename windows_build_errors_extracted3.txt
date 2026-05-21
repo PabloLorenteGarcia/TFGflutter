@@ -1,0 +1,57 @@
+﻿[        ] Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Insiders/MSBuild/Current/Bin/amd64/MSBuild.exe" INSTALL.vcxproj /p:Configuration=Release /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+[ +205 ms] Proyecto "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj" en nodo 1 (destinos predeterminados).
+[        ] El proyecto "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj" (1) est├í compilando "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\ZERO_CHECK.vcxproj" (2) en el nodo 1 (destinos predeterminados).
+[ +111 ms] El proyecto "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj" (1) est├í compilando "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\ALL_BUILD.vcxproj" (3) en el nodo 1 (destinos predeterminados).
+[        ]   C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35717\bin\HostX64\x64\link.exe /OUT:"C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\plugins\file_selector_windows\Release\file_selector_windows_plugin.dll" /INCREMENTAL:NO /NOLOGO ..\..\flutter\Release\flutter_wrapper_plugin.lib C:\Users\Admin\Desktop\TFGflutter\windows\flutter\ephemeral\flutter_windows.dll.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:"C:/Users/Admin/Desktop/TFGflutter/build/windows/x64/plugins/file_selector_windows/Release/file_selector_windows_plugin.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Admin/Desktop/TFGflutter/build/windows/x64/plugins/file_selector_windows/Release/file_selector_windows_plugin.lib" /MACHINE:X64  /machine:x64 /DLL file_selector_windows_plugin.dir\Release\file_selector_windows.obj
+[        ]   C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35717\bin\HostX64\x64\link.exe /OUT:"C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\runner\Release\plantcare.exe" /INCREMENTAL:NO /NOLOGO ..\flutter\Release\flutter_wrapper_app.lib dwmapi.lib ..\plugins\cloud_firestore\Release\cloud_firestore_plugin.lib ..\plugins\file_selector_windows\Release\file_selector_windows_plugin.lib ..\plugins\firebase_auth\Release\firebase_auth_plugin.lib ..\plugins\firebase_core\Release\firebase_core_plugin.lib ..\plugins\firebase_storage\Release\firebase_storage_plugin.lib ..\extracted\firebase_cpp_sdk_windows\libs\windows\VS2019\MD\x64\Release\firebase_firestore.lib shell32.lib Bcrypt.lib DbgHelp.lib ..\extracted\firebase_cpp_sdk_windows\libs\windows\VS2019\MD\x64\Release\firebase_auth.lib ..\plugins\firebase_core\Release\firebase_core_plugin.lib advapi32.lib ws2_32.lib crypt32.lib rpcrt4.lib ole32.lib ..\extracted\firebase_cpp_sdk_windows\libs\windows\VS2019\MD\x64\Release\firebase_app.lib icu.lib ..\flutter\Release\flutter_wrapper_plugin.lib C:\Users\Admin\Desktop\TFGflutter\windows\flutter\ephemeral\flutter_windows.dll.lib ..\extracted\firebase_cpp_sdk_windows\libs\windows\VS2019\MD\x64\Release\firebase_storage.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /manifestinput:C:\Users\Admin\Desktop\TFGflutter\windows\runner\runner.exe.manifest /PDB:"C:/Users/Admin/Desktop/TFGflutter/build/windows/x64/runner/Release/plantcare.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /IMPLIB:"C:/Users/Admin/Desktop/TFGflutter/build/windows/x64/runner/Release/plantcare.lib" /MACHINE:X64  /machine:x64 plantcare.dir\Release\Runner.res
+[        ]   Creando directorio "x64\Release\INSTALL\INSTALL.tlog\".
+[        ]   Se crear├í "x64\Release\INSTALL\INSTALL.tlog\unsuccessfulbuild" porque se especific├│ "AlwaysCreate".
+[        ]   Aplicando tarea Touch a "x64\Release\INSTALL\INSTALL.tlog\unsuccessfulbuild".
+[        ]   "C:\Program Files\Microsoft Visual Studio\18\Insiders\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -DBUILD_TYPE=Release -P cmake_install.cmake
+[  +13 ms]   CMake Error at cmake_install.cmake:100 (file):
+[        ]     file cannot create directory: C:/Program Files/plantcare.  Maybe need
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: El comando 
+"setlocal [C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: "C:\Program 
+t\CMake\CMake\bin\cmake.exe" -DBUILD_TYPE=Release -P cmake_install.cmake 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: if %errorlevel% 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmEnd 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: endlocal & call 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmErrorLevel 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: exit /b %1 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmDone 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: if %errorlevel% 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :VCEnd" sali├│ 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+[        ] Compilaci├│n del proyecto terminada "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj" (destinos predeterminados) -- ERROR.
+[   +2 ms] "C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj" (destino predeterminado) (1) ->
+soft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: El comando 
+"setlocal [C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: "C:\Program 
+t\CMake\CMake\bin\cmake.exe" -DBUILD_TYPE=Release -P cmake_install.cmake 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: if %errorlevel% 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmEnd 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: endlocal & call 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmErrorLevel 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: exit /b %1 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :cmDone 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: if %errorlevel% 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+ft\VC\v180\Microsoft.CppCommon.targets(166,5): error MSB3073: :VCEnd" sali├│ 
+[C:\Users\Admin\Desktop\TFGflutter\build\windows\x64\INSTALL.vcxproj]
+[ +112 ms] Build process failed.

@@ -22,6 +22,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Inicializa el provider y escucha cambios de autenticación
   AuthProvider() {
+    _user = _authService.currentUser;
     _authService.authStateChanges.listen((user) {
       _user = user;
       notifyListeners();

@@ -503,7 +503,9 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     // Esperar a que se complete el guardado
     try {
       await context.read<PlantProvider>().addPlant(plant);
-      
+      // Asegurar que la lista se recargue desde el repositorio/local+remoto
+      await context.read<PlantProvider>().loadPlants();
+
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(

@@ -46,6 +46,9 @@ class _PlantCareAppState extends State<PlantCareApp> {
     
     // Sincronizar auth con plant provider
     _authProvider.addListener(_onAuthChanged);
+    if (_authProvider.isAuthenticated) {
+      _plantProvider.setUserId(_authProvider.userId);
+    }
   }
 
   void _onAuthChanged() {

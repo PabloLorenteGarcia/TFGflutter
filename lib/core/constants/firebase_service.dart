@@ -88,17 +88,28 @@ class FirebaseService {
     await db.collection('plants').doc(id).delete();
   }
 
+  /// Crea o actualiza el documento del usuario en Firestore usando su UID
+  Future<void> createUserDocument(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
+    final db = await firestore;
+    await db.collection('users').doc(userId).set(data);
+  }
+
   // ==================== PLANTAS DEL USUARIO ====================
 
   /// Obtiene la colección de plantas de un usuario específico
-  CollectionReference _getUserPlantsCollection(String userId) {
-    return FirebaseFirestore.instance.collection('users').doc(userId).collection('plants');
+  Future<CollectionReference> _getUserPlantsCollection(String userId) async {
+    final db = await firestore;
+    return db.collection('users').doc(userId).collection('plants');
   }
 
   /// Obtiene todas las plantas de un usuario
   Future<List<Plant>> getUserPlants(String userId) async {
     try {
-      final snapshot = await _getUserPlantsCollection(userId).get();
+      final collection = await _getUserPlantsCollection(userId);
+      final snapshot = await collection.get();
       return snapshot.docs
           .map((doc) => _plantFromFirestore(doc, userId))
           .toList();
@@ -111,7 +122,9 @@ class FirebaseService {
   /// Agrega una planta al usuario
   Future<void> addUserPlant(String userId, Plant plant) async {
     try {
-      await _getUserPlantsCollection(userId).doc(plant.id).set(plant.toMap());
+      final collection = await _getUserPlantsCollection(userId);
+      final plantData = plant.toFirestoreMap()..['userId'] = userId;
+      await collection.doc(plant.id).set(plantData);
     } catch (e) {
       print('Error al guardar planta: $e');
       rethrow;
@@ -121,7 +134,9 @@ class FirebaseService {
   /// Actualiza una planta del usuario
   Future<void> updateUserPlant(String userId, Plant plant) async {
     try {
-      await _getUserPlantsCollection(userId).doc(plant.id).update(plant.toMap());
+      final collection = await _getUserPlantsCollection(userId);
+      final plantData = plant.toFirestoreMap()..['userId'] = userId;
+      await collection.doc(plant.id).update(plantData);
     } catch (e) {
       print('Error al actualizar planta: $e');
       rethrow;
@@ -131,7 +146,8 @@ class FirebaseService {
   /// Elimina una planta del usuario
   Future<void> deleteUserPlant(String userId, String plantId) async {
     try {
-      await _getUserPlantsCollection(userId).doc(plantId).delete();
+      final collection = await _getUserPlantsCollection(userId);
+      await collection.doc(plantId).delete();
     } catch (e) {
       print('Error al eliminar planta: $e');
       rethrow;
@@ -141,7 +157,8 @@ class FirebaseService {
   /// Obtiene una planta específica del usuario
   Future<Plant?> getUserPlantById(String userId, String plantId) async {
     try {
-      final doc = await _getUserPlantsCollection(userId).doc(plantId).get();
+      final collection = await _getUserPlantsCollection(userId);
+      final doc = await collection.doc(plantId).get();
       if (!doc.exists) return null;
       return _plantFromFirestore(doc, userId);
     } catch (e) {
@@ -161,8 +178,10 @@ class FirebaseService {
       species: data['species'] as String?,
       imagePath: data['imagePath'] as String?,
       location: data['location'] as String?,
-      lightRequirement: LightRequirement.values[data['lightRequirement'] as int],
-      wateringFrequency: WateringFrequency.values[data['wateringFrequency'] as int],
+      lightRequirement:
+          LightRequirement.values[data['lightRequirement'] as int],
+      wateringFrequency:
+          WateringFrequency.values[data['wateringFrequency'] as int],
       wateringAmount: WateringAmount.values[data['wateringAmount'] as int],
       minTemp: (data['minTemp'] as num).toDouble(),
       maxTemp: (data['maxTemp'] as num).toDouble(),
@@ -180,7 +199,7 @@ class FirebaseService {
       createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int),
       notes: data['notes'] as String?,
       catalogPlantId: data['catalogPlantId'] as String?,
-      userId: userId,
+      userId: userId ?? data['userId'] as String?,
     );
   }
 
@@ -193,8 +212,10 @@ class FirebaseService {
       scientificName: data['scientificName'] as String,
       category: PlantCategory.values[data['category'] as int],
       description: data['description'] as String,
-      lightRequirement: LightRequirement.values[data['lightRequirement'] as int],
-      wateringFrequency: WateringFrequency.values[data['wateringFrequency'] as int],
+      lightRequirement:
+          LightRequirement.values[data['lightRequirement'] as int],
+      wateringFrequency:
+          WateringFrequency.values[data['wateringFrequency'] as int],
       wateringAmount: WateringAmount.values[data['wateringAmount'] as int],
       minTemp: (data['minTemp'] as num).toDouble(),
       maxTemp: (data['maxTemp'] as num).toDouble(),

@@ -22,6 +22,16 @@ class MyPlantsScreen extends StatefulWidget {
 class _MyPlantsScreenState extends State<MyPlantsScreen> {
   bool _isIdentifyingPlant = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Asegurar que se carguen las plantas al abrir la pantalla
+      final provider = context.read<PlantProvider>();
+      if (!provider.isLoading) provider.loadPlants();
+    });
+  }
+
   Future<void> _pickAndIdentifyPlant(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source);
