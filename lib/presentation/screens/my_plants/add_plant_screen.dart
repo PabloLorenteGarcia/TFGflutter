@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:plantcare/core/theme/app_theme.dart';
 import 'package:plantcare/domain/entities/enums.dart';
 import 'package:plantcare/domain/entities/plant.dart';
@@ -447,6 +448,22 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   void _savePlant() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Verificar que el usuario está autenticado
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Error: Debes iniciar sesión primero'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      print('❌ Error: Usuario no autenticado');
+      return;
+    }
+
+    final userId = currentUser.uid;
+    print('👤 Usuario autenticado: $userId');
+
     // Mostrar indicador de carga
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -457,6 +474,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
 
     final now = DateTime.now();
     final plantId = const Uuid().v4();
+    print('🌱 Creando planta: $plantId');
 
     // Upload image if selected
     if (_selectedImage != null) {
@@ -498,29 +516,38 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
           ? _notesController.text.trim() 
           : null,
       catalogPlantId: widget.catalogPlantId,
+      userId: userId, // Asignar explícitamente el ID del usuario
     );
 
     // Esperar a que se complete el guardado
     try {
+      print('💾 Iniciando guardado de planta...');
       await context.read<PlantProvider>().addPlant(plant);
+      print('✅ Planta guardada en provider');
+      
       // Asegurar que la lista se recargue desde el repositorio/local+remoto
+      print('🔄 Recargando lista de plantas...');
       await context.read<PlantProvider>().loadPlants();
+      print('✅ Lista de plantas recargada');
 
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${plant.name} añadida correctamente'),
+            content: Text('✅ ${plant.name} añadida correctamente'),
             backgroundColor: AppColors.success,
           ),
         );
+        print('✅ Planta guardada exitosamente: ${plant.name}');
       }
     } catch (e) {
+      print('❌ ERROR AL GUARDAR PLANTA: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al guardar: $e'),
+            content: Text('❌ Error: $e'),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 10),
           ),
         );
       }

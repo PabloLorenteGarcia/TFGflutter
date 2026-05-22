@@ -26,7 +26,7 @@ class FirebaseService {
   /// Obtiene todas las plantas del catálogo desde Firestore
   Future<List<CatalogPlant>> getAllPlants() async {
     final db = await firestore;
-    final snapshot = await db.collection('plants').get();
+    final snapshot = await db.collection('catalog_plants').get();
     return snapshot.docs.map((doc) => _catalogPlantFromFirestore(doc)).toList();
   }
 
@@ -34,7 +34,7 @@ class FirebaseService {
   Future<List<CatalogPlant>> getPlantsByCategory(PlantCategory category) async {
     final db = await firestore;
     final snapshot = await db
-        .collection('plants')
+        .collection('catalog_plants')
         .where('category', isEqualTo: category.index)
         .get();
     return snapshot.docs.map((doc) => _catalogPlantFromFirestore(doc)).toList();
@@ -44,7 +44,7 @@ class FirebaseService {
   Future<List<CatalogPlant>> searchPlants(String query) async {
     final db = await firestore;
     final snapshot = await db
-        .collection('plants')
+        .collection('catalog_plants')
         .where('name', isGreaterThanOrEqualTo: query)
         .where('name', isLessThanOrEqualTo: query + '\uf8ff')
         .get();
@@ -54,7 +54,7 @@ class FirebaseService {
   /// Obtiene una planta por su ID
   Future<CatalogPlant?> getPlantById(String id) async {
     final db = await firestore;
-    final doc = await db.collection('plants').doc(id).get();
+    final doc = await db.collection('catalog_plants').doc(id).get();
     if (!doc.exists) return null;
     return _catalogPlantFromFirestore(doc);
   }
@@ -62,7 +62,7 @@ class FirebaseService {
   /// Agrega una planta al catálogo
   Future<void> addPlant(CatalogPlant plant) async {
     final db = await firestore;
-    await db.collection('plants').doc(plant.id).set(plant.toMap());
+    await db.collection('catalog_plants').doc(plant.id).set(plant.toMap());
   }
 
   /// Agrega múltiples plantas al catálogo
@@ -70,7 +70,7 @@ class FirebaseService {
     final db = await firestore;
     final batch = db.batch();
     for (final plant in plants) {
-      final docRef = db.collection('plants').doc(plant.id);
+      final docRef = db.collection('catalog_plants').doc(plant.id);
       batch.set(docRef, plant.toMap());
     }
     await batch.commit();
@@ -79,13 +79,13 @@ class FirebaseService {
   /// Actualiza una planta del catálogo
   Future<void> updatePlant(CatalogPlant plant) async {
     final db = await firestore;
-    await db.collection('plants').doc(plant.id).update(plant.toMap());
+    await db.collection('catalog_plants').doc(plant.id).update(plant.toMap());
   }
 
   /// Elimina una planta del catálogo
   Future<void> deletePlant(String id) async {
     final db = await firestore;
-    await db.collection('plants').doc(id).delete();
+    await db.collection('catalog_plants').doc(id).delete();
   }
 
   /// Crea o actualiza el documento del usuario en Firestore usando su UID
@@ -94,24 +94,49 @@ class FirebaseService {
     Map<String, dynamic> data,
   ) async {
     final db = await firestore;
-    await db.collection('users').doc(userId).set(data);
+    await db.collection('users').doc(userId).set(data, SetOptions(merge: true));
+  }
+
+  /// Asegura que el documento de usuario existe en Firestore
+  Future<void> ensureUserDocument(String userId, {String? email}) async {
+    final db = await firestore;
+    await db.collection('usuarios').doc(userId).set({
+      if (email != null) 'email': email,
+    }, SetOptions(merge: true));
   }
 
   // ==================== PLANTAS DEL USUARIO ====================
 
-  /// Obtiene la colección de plantas de un usuario específico
-  Future<CollectionReference> _getUserPlantsCollection(String userId) async {
-    final db = await firestore;
-    return db.collection('users').doc(userId).collection('plants');
-  }
-
-  /// Obtiene todas las plantas de un usuario
+  /// Obtiene todas las plantas de un usuario desde la subcolección `plantas`
   Future<List<Plant>> getUserPlants(String userId) async {
     try {
-      final collection = await _getUserPlantsCollection(userId);
-      final snapshot = await collection.get();
-      return snapshot.docs
+      final db = await firestore;
+      final snapshot = await db
+          .collection('usuarios')
+          .doc(userId)
+          .collection('plantas')
+          .get();
+
+      final plants = snapshot.docs
           .map((doc) => _plantFromFirestore(doc, userId))
+          .toList();
+
+      if (plants.isNotEmpty) return plants;
+
+      // Si no hay plantas en la subcolección, intentar migrar desde el campo antiguo `plantas`.
+      final userDoc = await db.collection('usuarios').doc(userId).get();
+      if (!userDoc.exists) return [];
+      final data = userDoc.data() as Map<String, dynamic>?;
+      final oldPlantas = data?['plantas'] as Map<String, dynamic>?;
+      if (oldPlantas == null) return [];
+
+      return oldPlantas.entries
+          .map(
+            (entry) => _plantFromMap(
+              Map<String, dynamic>.from(entry.value as Map),
+              userId,
+            ),
+          )
           .toList();
     } catch (e) {
       print('Error al obtener plantas del usuario: $e');
@@ -119,46 +144,118 @@ class FirebaseService {
     }
   }
 
-  /// Agrega una planta al usuario
+  /// Agrega una planta al usuario usando la subcolección `plantas`
   Future<void> addUserPlant(String userId, Plant plant) async {
+    print('🌱 INICIANDO: Guardar planta - userId: $userId, plantId: ${plant.id}');
+    
+    if (userId.isEmpty) {
+      throw Exception('❌ Error: userId está vacío. Usuario no autenticado.');
+    }
+
+    final db = await firestore;
+    final plantData = plant.toFirestoreMap()..['userId'] = userId;
+    
+    print('📦 Datos a guardar: ${plantData.keys.toList()}');
+
+    // Asegurar que el documento de usuario existe
     try {
-      final collection = await _getUserPlantsCollection(userId);
-      final plantData = plant.toFirestoreMap()..['userId'] = userId;
-      await collection.doc(plant.id).set(plantData);
+      print('👤 Creando/verificando documento de usuario...');
+      await ensureUserDocument(userId);
+      print('✅ Documento de usuario verificado');
     } catch (e) {
-      print('Error al guardar planta: $e');
+      print('❌ Error al verificar documento de usuario: $e');
       rethrow;
+    }
+
+    // Guardar en la subcolección del usuario
+    try {
+      print('💾 Guardando en: usuarios/$userId/plantas/${plant.id}');
+      await db
+          .collection('usuarios')
+          .doc(userId)
+          .collection('plantas')
+          .doc(plant.id)
+          .set(plantData, SetOptions(merge: true));
+      print('✅ Planta guardada en subcolección exitosamente');
+    } catch (e) {
+      print('❌ Error al guardar planta en subcolección: $e');
+      rethrow;
+    }
+
+    // Guardar también en la colección global de plantas (opcional)
+    try {
+      print('💾 Guardando en colección global: plants/${plant.id}');
+      await db
+          .collection('plants')
+          .doc(plant.id)
+          .set(plantData, SetOptions(merge: true));
+      print('✅ Planta guardada en colección global');
+    } catch (e) {
+      print('⚠️ Advertencia: Error al guardar en colección global: $e');
+      // No relanzar aquí para no bloquear si falla la colección global
     }
   }
 
-  /// Actualiza una planta del usuario
+  /// Actualiza una planta del usuario en la subcolección `plantas`
   Future<void> updateUserPlant(String userId, Plant plant) async {
+    final db = await firestore;
+    final plantData = plant.toFirestoreMap()..['userId'] = userId;
+
     try {
-      final collection = await _getUserPlantsCollection(userId);
-      final plantData = plant.toFirestoreMap()..['userId'] = userId;
-      await collection.doc(plant.id).update(plantData);
+      await db
+          .collection('usuarios')
+          .doc(userId)
+          .collection('plantas')
+          .doc(plant.id)
+          .set(plantData, SetOptions(merge: true));
     } catch (e) {
-      print('Error al actualizar planta: $e');
+      print('Error al actualizar planta en la subcolección del usuario: $e');
+    }
+
+    try {
+      await db
+          .collection('plants')
+          .doc(plant.id)
+          .set(plantData, SetOptions(merge: true));
+    } catch (e) {
+      print('Error al actualizar planta en la colección global: $e');
       rethrow;
     }
   }
 
-  /// Elimina una planta del usuario
+  /// Elimina una planta del usuario de la subcolección `plantas`
   Future<void> deleteUserPlant(String userId, String plantId) async {
+    final db = await firestore;
+
     try {
-      final collection = await _getUserPlantsCollection(userId);
-      await collection.doc(plantId).delete();
+      await db
+          .collection('usuarios')
+          .doc(userId)
+          .collection('plantas')
+          .doc(plantId)
+          .delete();
     } catch (e) {
-      print('Error al eliminar planta: $e');
+      print('Error al eliminar planta de la subcolección del usuario: $e');
+    }
+
+    try {
+      await db.collection('plants').doc(plantId).delete();
+    } catch (e) {
+      print('Error al eliminar planta de la colección global: $e');
       rethrow;
     }
   }
 
-  /// Obtiene una planta específica del usuario
+  /// Obtiene una planta específica del usuario desde la subcolección `plantas`
   Future<Plant?> getUserPlantById(String userId, String plantId) async {
     try {
-      final collection = await _getUserPlantsCollection(userId);
-      final doc = await collection.doc(plantId).get();
+      final db = await firestore;
+      final doc = await db
+          .collection('usuarios')
+          .doc(userId)
+          .collection('plantas')
+          .doc(plantId)
+          .get();
       if (!doc.exists) return null;
       return _plantFromFirestore(doc, userId);
     } catch (e) {
@@ -172,6 +269,10 @@ class FirebaseService {
   /// Convierte un documento de Firestore a Plant del usuario
   Plant _plantFromFirestore(DocumentSnapshot doc, [String? userId]) {
     final data = doc.data() as Map<String, dynamic>;
+    return _plantFromMap(data, userId);
+  }
+
+  Plant _plantFromMap(Map<String, dynamic> data, [String? userId]) {
     return Plant(
       id: data['id'] as String,
       name: data['name'] as String,

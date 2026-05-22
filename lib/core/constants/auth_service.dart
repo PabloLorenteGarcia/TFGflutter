@@ -48,7 +48,11 @@ class AuthService {
         email: email,
         password: password,
       );
-      return credential.user;
+      final user = credential.user;
+      if (user != null) {
+        await _firebaseService.ensureUserDocument(user.uid, email: user.email);
+      }
+      return user;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }

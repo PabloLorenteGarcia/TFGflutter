@@ -17,9 +17,11 @@ void main() async {
   
   // Inicializar Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('✅ Firebase inicializado correctamente');
   
   // Inicializar notificaciones
   await NotificationService().initialize();
+  print('✅ Notificaciones inicializadas');
   
   runApp(const PlantCareApp());
 }
