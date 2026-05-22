@@ -11,6 +11,8 @@ class PlantProvider extends ChangeNotifier {
   final PlantRepository _localRepository = PlantRepository();
   String? _userId;
 
+  bool get _useLocalStorage => !kIsWeb;
+
   String? get _effectiveUserId =>
       _userId ?? FirebaseAuth.instance.currentUser?.uid;
 
@@ -51,20 +53,22 @@ class PlantProvider extends ChangeNotifier {
       final currentUserId = _effectiveUserId;
 
       if (currentUserId != null) {
-        final localPlants = await _localRepository.getAllPlants(
-          userId: currentUserId,
-        );
-        final anonymousPlants = await _localRepository.getAllPlants(
-          userId: null,
-        );
+        if (_useLocalStorage) {
+          final localPlants = await _localRepository.getAllPlants(
+            userId: currentUserId,
+          );
+          final anonymousPlants = await _localRepository.getAllPlants(
+            userId: null,
+          );
 
-        for (final plant in [...localPlants, ...anonymousPlants]) {
-          mergedPlants[plant.id] = plant;
+          for (final plant in [...localPlants, ...anonymousPlants]) {
+            mergedPlants[plant.id] = plant;
+          }
+
+          _plants = mergedPlants.values.toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          notifyListeners();
         }
-
-        _plants = mergedPlants.values.toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        notifyListeners();
 
         final remotePlants = await _remoteRepository.getUserPlants(
           currentUserId,
@@ -74,26 +78,39 @@ class PlantProvider extends ChangeNotifier {
               ? remotePlant
               : remotePlant.copyWith(userId: currentUserId);
           mergedPlants[plantWithUserId.id] = plantWithUserId;
-          await _localRepository.addPlant(plantWithUserId);
+          if (_useLocalStorage) {
+            await _localRepository.addPlant(plantWithUserId);
+          }
         }
 
-        for (final localPlant in [...localPlants, ...anonymousPlants]) {
-          final existsRemotely = remotePlants.any((p) => p.id == localPlant.id);
-          if (!existsRemotely) {
-            final labeledPlant = localPlant.userId == currentUserId
-                ? localPlant
-                : localPlant.copyWith(userId: currentUserId);
-            await _remoteRepository.addUserPlant(currentUserId, labeledPlant);
-            if (localPlant.userId != currentUserId) {
-              await _localRepository.updatePlant(labeledPlant);
-              mergedPlants[labeledPlant.id] = labeledPlant;
+        if (_useLocalStorage) {
+          final localPlants = await _localRepository.getAllPlants(
+            userId: currentUserId,
+          );
+          final anonymousPlants = await _localRepository.getAllPlants(
+            userId: null,
+          );
+
+          for (final localPlant in [...localPlants, ...anonymousPlants]) {
+            final existsRemotely = remotePlants.any((p) => p.id == localPlant.id);
+            if (!existsRemotely) {
+              final labeledPlant = localPlant.userId == currentUserId
+                  ? localPlant
+                  : localPlant.copyWith(userId: currentUserId);
+              await _remoteRepository.addUserPlant(currentUserId, labeledPlant);
+              if (localPlant.userId != currentUserId) {
+                await _localRepository.updatePlant(labeledPlant);
+                mergedPlants[labeledPlant.id] = labeledPlant;
+              }
             }
           }
         }
       } else {
-        final localPlants = await _localRepository.getAllPlants(userId: null);
-        for (final plant in localPlants) {
-          mergedPlants[plant.id] = plant;
+        if (_useLocalStorage) {
+          final localPlants = await _localRepository.getAllPlants(userId: null);
+          for (final plant in localPlants) {
+            mergedPlants[plant.id] = plant;
+          }
         }
       }
 
@@ -119,22 +136,23 @@ class PlantProvider extends ChangeNotifier {
     
     final plantToSave = plant.copyWith(userId: currentUserId);
 
-    try {
-      print('💾 Guardando localmente...');
-      await _localRepository.addPlant(plantToSave);
-      _plants.insert(0, plantToSave);
-      notifyListeners();
-      print('✅ Guardado local completado');
-    } catch (e) {
-      print('⚠️ Advertencia: Error al guardar localmente: $e');
-      // No fallar aquí - continuar con Firebase
+    if (_useLocalStorage) {
+      try {
+        print('💾 Guardando localmente...');
+        await _localRepository.addPlant(plantToSave);
+        _plants.insert(0, plantToSave);
+        notifyListeners();
+        print('✅ Guardado local completado');
+      } catch (e) {
+        print('⚠️ Advertencia: Error al guardar localmente: $e');
+        // No fallar aquí - continuar con Firebase
+      }
     }
 
     try {
       print('🌐 Sincronizando con Firebase...');
       await _remoteRepository.addUserPlant(currentUserId, plantToSave);
       print('✅ Sincronización con Firebase completada');
-      // Asegurar que la planta esté en la lista aunque el guardado local haya fallado
       if (!_plants.any((p) => p.id == plantToSave.id)) {
         _plants.insert(0, plantToSave);
       }
@@ -155,7 +173,9 @@ class PlantProvider extends ChangeNotifier {
         : plant;
 
     try {
-      await _localRepository.updatePlant(plantToSave);
+      if (_useLocalStorage) {
+        await _localRepository.updatePlant(plantToSave);
+      }
       if (currentUserId != null) {
         await _remoteRepository.updateUserPlant(currentUserId, plantToSave);
       }
@@ -173,7 +193,9 @@ class PlantProvider extends ChangeNotifier {
   /// Elimina una planta
   Future<void> deletePlant(String id) async {
     try {
-      await _localRepository.deletePlant(id);
+      if (_useLocalStorage) {
+        await _localRepository.deletePlant(id);
+      }
       final currentUserId = _effectiveUserId;
       if (currentUserId != null) {
         await _remoteRepository.deleteUserPlant(currentUserId, id);
@@ -199,7 +221,9 @@ class PlantProvider extends ChangeNotifier {
           nextWatering: plant.calculateNextWatering(),
           userId: currentUserId ?? plant.userId,
         );
-        await _localRepository.updatePlant(updatedPlant);
+        if (_useLocalStorage) {
+          await _localRepository.updatePlant(updatedPlant);
+        }
         if (currentUserId != null) {
           await _remoteRepository.updateUserPlant(currentUserId, updatedPlant);
         }
