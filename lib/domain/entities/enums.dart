@@ -36,13 +36,37 @@ enum HumidityLevel {
 
 /// Enum para la cantidad de agua
 enum WateringAmount {
-  low('Poco', 'Pequeñas cantidades'),
-  medium('Medio', 'Cantidad moderada'),
-  high('Mucho', 'Riego abundante');
+  low('Poco', 'Pequeñas cantidades', 0.5),
+  medium('Medio', 'Cantidad moderada', 1.0),
+  high('Mucho', 'Riego abundante', 2.0);
 
   final String label;
   final String description;
-  const WateringAmount(this.label, this.description);
+  final double liters;
+  const WateringAmount(this.label, this.description, this.liters);
+
+  static WateringAmount fromLiters(double liters) {
+    final normalized = liters.clamp(0.5, 2.0);
+    WateringAmount best = low;
+    double bestDiff = double.infinity;
+
+    for (final amount in WateringAmount.values) {
+      final diff = (amount.liters - normalized).abs();
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = amount;
+      }
+    }
+
+    return best;
+  }
+
+  String get litersLabel => liters == liters.toInt()
+      ? '${liters.toInt()} L'
+      : liters.toStringAsFixed(2)
+              .replaceFirst(RegExp(r'0+$'), '')
+              .replaceFirst(RegExp(r'\.$'), '') +
+          ' L';
 }
 
 /// Enum para categorías de plantas

@@ -128,7 +128,7 @@ class CatalogDetailScreen extends StatelessWidget {
                         Icons.water_drop,
                         'Riego',
                         plant.wateringFrequency.label,
-                        plant.wateringAmount.description,
+                        plant.wateringAmount.litersLabel,
                       ),
                       _buildRequirementRow(
                         context,

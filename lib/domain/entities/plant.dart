@@ -10,6 +10,7 @@ class Plant {
   final LightRequirement lightRequirement;
   final WateringFrequency wateringFrequency;
   final WateringAmount wateringAmount;
+  final double wateringAmountLiters;
   final double minTemp;
   final double maxTemp;
   final HumidityLevel humidityLevel;
@@ -31,6 +32,7 @@ class Plant {
     required this.lightRequirement,
     required this.wateringFrequency,
     required this.wateringAmount,
+    double? wateringAmountLiters,
     required this.minTemp,
     required this.maxTemp,
     required this.humidityLevel,
@@ -42,7 +44,7 @@ class Plant {
     this.notes,
     this.catalogPlantId,
     this.userId,
-  });
+  }) : wateringAmountLiters = wateringAmountLiters ?? wateringAmount.liters;
 
   /// Crea una copia con los campos actualizados
   Plant copyWith({
@@ -54,6 +56,7 @@ class Plant {
     LightRequirement? lightRequirement,
     WateringFrequency? wateringFrequency,
     WateringAmount? wateringAmount,
+    double? wateringAmountLiters,
     double? minTemp,
     double? maxTemp,
     HumidityLevel? humidityLevel,
@@ -75,6 +78,7 @@ class Plant {
       lightRequirement: lightRequirement ?? this.lightRequirement,
       wateringFrequency: wateringFrequency ?? this.wateringFrequency,
       wateringAmount: wateringAmount ?? this.wateringAmount,
+      wateringAmountLiters: wateringAmountLiters ?? this.wateringAmountLiters,
       minTemp: minTemp ?? this.minTemp,
       maxTemp: maxTemp ?? this.maxTemp,
       humidityLevel: humidityLevel ?? this.humidityLevel,
@@ -89,6 +93,16 @@ class Plant {
     );
   }
 
+  String get wateringAmountDisplay {
+    final text = wateringAmountLiters == wateringAmountLiters.toInt()
+        ? wateringAmountLiters.toInt().toString()
+        : wateringAmountLiters.toStringAsFixed(2)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
+
+    return '$text L';
+  }
+
   /// Convierte a mapa para guardar en la base de datos
   Map<String, dynamic> toMap() {
     return {
@@ -100,6 +114,7 @@ class Plant {
       'lightRequirement': lightRequirement.index,
       'wateringFrequency': wateringFrequency.index,
       'wateringAmount': wateringAmount.index,
+      'wateringAmountLiters': wateringAmountLiters,
       'minTemp': minTemp,
       'maxTemp': maxTemp,
       'humidityLevel': humidityLevel.index,
@@ -124,6 +139,7 @@ class Plant {
       'lightRequirement': lightRequirement.index,
       'wateringFrequency': wateringFrequency.index,
       'wateringAmount': wateringAmount.index,
+      'wateringAmountLiters': wateringAmountLiters,
       'minTemp': minTemp,
       'maxTemp': maxTemp,
       'humidityLevel': humidityLevel.index,
@@ -140,6 +156,9 @@ class Plant {
 
   /// Crea una planta desde un mapa de la base de datos
   factory Plant.fromMap(Map<String, dynamic> map) {
+    final wateringAmount = WateringAmount.values[map['wateringAmount'] as int];
+    final wateringAmountLiters = (map['wateringAmountLiters'] as num?)?.toDouble() ?? wateringAmount.liters;
+
     return Plant(
       id: map['id'] as String,
       name: map['name'] as String,
@@ -148,7 +167,8 @@ class Plant {
       location: map['location'] as String?,
       lightRequirement: LightRequirement.values[map['lightRequirement'] as int],
       wateringFrequency: WateringFrequency.values[map['wateringFrequency'] as int],
-      wateringAmount: WateringAmount.values[map['wateringAmount'] as int],
+      wateringAmount: wateringAmount,
+      wateringAmountLiters: wateringAmountLiters,
       minTemp: (map['minTemp'] as num).toDouble(),
       maxTemp: (map['maxTemp'] as num).toDouble(),
       humidityLevel: HumidityLevel.values[map['humidityLevel'] as int],

@@ -126,7 +126,7 @@ class PlantIdentificationResultScreen extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _selectSpecies(context, species),
+        onTap: () => context.push('/plant-identification-detail', extra: species),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -216,7 +216,6 @@ class PlantIdentificationResultScreen extends StatelessWidget {
   }
 
   void _selectSpecies(BuildContext context, IdentifiedSpecies species) {
-    // Devolver la especie seleccionada a la pantalla anterior
-    context.pop(species);
+    context.push('/plant-identification-detail', extra: species);
   }
 }

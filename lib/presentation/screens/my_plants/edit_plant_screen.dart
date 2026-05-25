@@ -22,10 +22,11 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
   late TextEditingController _speciesController;
   late TextEditingController _locationController;
   late TextEditingController _notesController;
+  late TextEditingController _wateringAmountController;
 
   late LightRequirement _lightRequirement;
   late WateringFrequency _wateringFrequency;
-  late WateringAmount _wateringAmount;
+  late double _wateringAmountLiters;
   late HumidityLevel _humidityLevel;
   late double _minTemp;
   late double _maxTemp;
@@ -40,6 +41,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     _speciesController = TextEditingController();
     _locationController = TextEditingController();
     _notesController = TextEditingController();
+    _wateringAmountController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPlant();
@@ -59,7 +61,8 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
         _notesController.text = plant.notes ?? '';
         _lightRequirement = plant.lightRequirement;
         _wateringFrequency = plant.wateringFrequency;
-        _wateringAmount = plant.wateringAmount;
+        _wateringAmountLiters = plant.wateringAmountLiters;
+        _wateringAmountController.text = _formatWateringAmount(_wateringAmountLiters);
         _humidityLevel = plant.humidityLevel;
         _minTemp = plant.minTemp;
         _maxTemp = plant.maxTemp;
@@ -74,6 +77,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     _speciesController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _wateringAmountController.dispose();
     super.dispose();
   }
 
@@ -157,13 +161,28 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
             const SizedBox(height: 16),
 
             // Cantidad de agua
-            _buildDropdown<WateringAmount>(
-              label: 'Cantidad de agua',
-              value: _wateringAmount,
-              items: WateringAmount.values,
-              getLabel: (item) => item.label,
-              icon: Icons.opacity,
-              onChanged: (value) => setState(() => _wateringAmount = value!),
+            TextFormField(
+              controller: _wateringAmountController,
+              decoration: const InputDecoration(
+                labelText: 'Cantidad de agua (L)',
+                hintText: 'Ej: 1.5',
+                prefixIcon: Icon(Icons.opacity),
+                suffixText: 'L',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                final liters = _parseWateringAmount(value);
+                if (liters == null || liters <= 0) {
+                  return 'Introduce una cantidad mayor que 0';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                final liters = _parseWateringAmount(value);
+                if (liters != null) {
+                  setState(() => _wateringAmountLiters = liters);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
@@ -290,8 +309,40 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     );
   }
 
+  String _formatWateringAmount(double liters) {
+    return liters == liters.toInt()
+        ? liters.toInt().toString()
+        : liters.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+  }
+
+  double? _parseWateringAmount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (parsed == null) {
+      return null;
+    }
+
+    return parsed;
+  }
+
   void _updatePlant() {
     if (_formKey.currentState!.validate() && _plant != null) {
+      final liters = _parseWateringAmount(_wateringAmountController.text);
+      if (liters == null || liters <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Introduce una cantidad de agua válida en litros'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      _wateringAmountLiters = liters;
+
       final updatedPlant = _plant!.copyWith(
         name: _nameController.text.trim(),
         species: _speciesController.text.trim().isNotEmpty 
@@ -302,7 +353,8 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
             : null,
         lightRequirement: _lightRequirement,
         wateringFrequency: _wateringFrequency,
-        wateringAmount: _wateringAmount,
+        wateringAmount: WateringAmount.fromLiters(_wateringAmountLiters),
+        wateringAmountLiters: _wateringAmountLiters,
         minTemp: _minTemp,
         maxTemp: _maxTemp,
         humidityLevel: _humidityLevel,

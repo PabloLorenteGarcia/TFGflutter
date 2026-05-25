@@ -12,6 +12,7 @@ import 'package:plantcare/presentation/screens/my_plants/plant_detail_screen.dar
 import 'package:plantcare/presentation/screens/my_plants/add_plant_screen.dart';
 import 'package:plantcare/presentation/screens/my_plants/edit_plant_screen.dart';
 import 'package:plantcare/presentation/screens/catalog/plant_identification_result_screen.dart';
+import 'package:plantcare/presentation/screens/catalog/identified_species_detail_screen.dart';
 import 'package:plantcare/presentation/screens/settings/settings_screen.dart';
 import 'package:plantcare/presentation/widgets/auth_screen.dart';
 import 'package:plantcare/presentation/widgets/main_scaffold.dart';
@@ -131,7 +132,13 @@ class AppRouter {
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) {
             final catalogPlantId = state.uri.queryParameters['fromCatalog'];
-            return AddPlantScreen(catalogPlantId: catalogPlantId);
+            final identifiedSpecies = state.extra is IdentifiedSpecies
+                ? state.extra as IdentifiedSpecies
+                : null;
+            return AddPlantScreen(
+              catalogPlantId: catalogPlantId,
+              identifiedSpecies: identifiedSpecies,
+            );
           },
         ),
         GoRoute(
@@ -159,6 +166,21 @@ class AppRouter {
           builder: (context, state) {
             final result = state.extra as PlantIdentificationResult?;
             return PlantIdentificationResultScreen(result: result ?? PlantIdentificationResult.error('No se encontraron resultados'));
+          },
+        ),
+        GoRoute(
+          path: '/plant-identification-detail',
+          name: 'plantIdentificationDetail',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final species = state.extra as IdentifiedSpecies?;
+            if (species == null) {
+              return const Scaffold(
+                body: Center(child: Text('No se encontró la planta sugerida')),
+              );
+            }
+
+            return IdentifiedSpeciesDetailScreen(species: species);
           },
         ),
       ],

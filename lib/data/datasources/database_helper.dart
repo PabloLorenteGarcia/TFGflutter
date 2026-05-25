@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -31,6 +31,20 @@ class DatabaseHelper {
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE plants ADD COLUMN userId TEXT');
+    }
+
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE plants ADD COLUMN wateringAmountLiters REAL NOT NULL DEFAULT 1.0',
+      );
+      await db.execute('''
+        UPDATE plants
+        SET wateringAmountLiters = CASE wateringAmount
+          WHEN 0 THEN 0.5
+          WHEN 1 THEN 1.0
+          ELSE 2.0
+        END
+      ''');
     }
   }
 
@@ -46,6 +60,7 @@ class DatabaseHelper {
         lightRequirement INTEGER NOT NULL,
         wateringFrequency INTEGER NOT NULL,
         wateringAmount INTEGER NOT NULL,
+        wateringAmountLiters REAL NOT NULL DEFAULT 1.0,
         minTemp REAL NOT NULL,
         maxTemp REAL NOT NULL,
         humidityLevel INTEGER NOT NULL,

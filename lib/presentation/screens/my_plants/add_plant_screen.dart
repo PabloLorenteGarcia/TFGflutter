@@ -16,8 +16,13 @@ import 'dart:io';
 /// Pantalla para añadir una nueva planta
 class AddPlantScreen extends StatefulWidget {
   final String? catalogPlantId;
+  final IdentifiedSpecies? identifiedSpecies;
 
-  const AddPlantScreen({super.key, this.catalogPlantId});
+  const AddPlantScreen({
+    super.key,
+    this.catalogPlantId,
+    this.identifiedSpecies,
+  });
 
   @override
   State<AddPlantScreen> createState() => _AddPlantScreenState();
@@ -29,10 +34,11 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   final _speciesController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
+  final _wateringAmountController = TextEditingController();
 
   LightRequirement _lightRequirement = LightRequirement.medium;
   WateringFrequency _wateringFrequency = WateringFrequency.weekly;
-  WateringAmount _wateringAmount = WateringAmount.medium;
+  double _wateringAmountLiters = 1.0;
   HumidityLevel _humidityLevel = HumidityLevel.medium;
   double _minTemp = 15;
   double _maxTemp = 25;
@@ -46,11 +52,27 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   @override
   void initState() {
     super.initState();
+    _wateringAmountController.text = _formatWateringAmount(_wateringAmountLiters);
+
+    if (widget.identifiedSpecies != null) {
+      _applyIdentifiedSpecies(widget.identifiedSpecies!);
+      return;
+    }
+
     if (widget.catalogPlantId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadFromCatalog();
       });
     }
+  }
+
+  void _applyIdentifiedSpecies(IdentifiedSpecies species) {
+    setState(() {
+      _nameController.text = species.commonNames.isNotEmpty
+          ? species.commonNames.first
+          : species.scientificName;
+      _speciesController.text = species.scientificName;
+    });
   }
 
   void _loadFromCatalog() async {
@@ -68,7 +90,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         _speciesController.text = catalogPlant.scientificName;
         _lightRequirement = catalogPlant.lightRequirement;
         _wateringFrequency = catalogPlant.wateringFrequency;
-        _wateringAmount = catalogPlant.wateringAmount;
+        _wateringAmountLiters = catalogPlant.wateringAmount.liters;
+        _wateringAmountController.text = _formatWateringAmount(_wateringAmountLiters);
         _humidityLevel = catalogPlant.humidityLevel;
         _minTemp = catalogPlant.minTemp;
         _maxTemp = catalogPlant.maxTemp;
@@ -187,6 +210,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     _speciesController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _wateringAmountController.dispose();
     super.dispose();
   }
 
@@ -194,7 +218,13 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.catalogPlantId != null ? 'Añadir Planta' : 'Crear Planta Personalizada'),
+        title: Text(
+          widget.identifiedSpecies != null
+              ? 'Añadir Planta Sugerida'
+              : widget.catalogPlantId != null
+                  ? 'Añadir Planta'
+                  : 'Crear Planta Personalizada',
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -313,13 +343,28 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             const SizedBox(height: 16),
 
             // Cantidad de agua
-            _buildDropdown<WateringAmount>(
-              label: 'Cantidad de agua',
-              value: _wateringAmount,
-              items: WateringAmount.values,
-              getLabel: (item) => item.label,
-              icon: Icons.opacity,
-              onChanged: (value) => setState(() => _wateringAmount = value!),
+            TextFormField(
+              controller: _wateringAmountController,
+              decoration: const InputDecoration(
+                labelText: 'Cantidad de agua (L)',
+                hintText: 'Ej: 1.5',
+                prefixIcon: Icon(Icons.opacity),
+                suffixText: 'L',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                final liters = _parseWateringAmount(value);
+                if (liters == null || liters <= 0) {
+                  return 'Introduce una cantidad mayor que 0';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                final liters = _parseWateringAmount(value);
+                if (liters != null) {
+                  setState(() => _wateringAmountLiters = liters);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
@@ -445,8 +490,40 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     );
   }
 
+  String _formatWateringAmount(double liters) {
+    return liters == liters.toInt()
+        ? liters.toInt().toString()
+        : liters.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+  }
+
+  double? _parseWateringAmount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (parsed == null) {
+      return null;
+    }
+
+    return parsed;
+  }
+
   void _savePlant() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final liters = _parseWateringAmount(_wateringAmountController.text);
+    if (liters == null || liters <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Introduce una cantidad de agua válida en litros'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    _wateringAmountLiters = liters;
 
     // Verificar que el usuario está autenticado
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -505,7 +582,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
           : null,
       lightRequirement: _lightRequirement,
       wateringFrequency: _wateringFrequency,
-      wateringAmount: _wateringAmount,
+      wateringAmount: WateringAmount.fromLiters(_wateringAmountLiters),
+      wateringAmountLiters: _wateringAmountLiters,
       minTemp: _minTemp,
       maxTemp: _maxTemp,
       humidityLevel: _humidityLevel,
@@ -531,7 +609,11 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
       print('✅ Lista de plantas recargada');
 
       if (mounted) {
-        context.pop();
+        if (widget.identifiedSpecies != null) {
+          context.go('/my-plants');
+        } else {
+          context.pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ ${plant.name} añadida correctamente'),

@@ -273,6 +273,9 @@ class FirebaseService {
   }
 
   Plant _plantFromMap(Map<String, dynamic> data, [String? userId]) {
+    final wateringAmount = WateringAmount.values[data['wateringAmount'] as int];
+    final wateringAmountLiters = (data['wateringAmountLiters'] as num?)?.toDouble() ?? wateringAmount.liters;
+
     return Plant(
       id: data['id'] as String,
       name: data['name'] as String,
@@ -283,7 +286,8 @@ class FirebaseService {
           LightRequirement.values[data['lightRequirement'] as int],
       wateringFrequency:
           WateringFrequency.values[data['wateringFrequency'] as int],
-      wateringAmount: WateringAmount.values[data['wateringAmount'] as int],
+      wateringAmount: wateringAmount,
+      wateringAmountLiters: wateringAmountLiters,
       minTemp: (data['minTemp'] as num).toDouble(),
       maxTemp: (data['maxTemp'] as num).toDouble(),
       humidityLevel: HumidityLevel.values[data['humidityLevel'] as int],
