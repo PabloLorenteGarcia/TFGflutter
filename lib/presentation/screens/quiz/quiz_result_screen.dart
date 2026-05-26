@@ -45,6 +45,8 @@ class QuizResultScreen extends StatelessWidget {
   }
 
   Widget _buildResults(BuildContext context, QuizProvider quizProvider) {
+    final suggestedPlant = quizProvider.suggestedPlant;
+
     return Column(
       children: [
         // Resumen
@@ -77,6 +79,69 @@ class QuizResultScreen extends StatelessWidget {
             ],
           ),
         ),
+
+        if (suggestedPlant != null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Card(
+              color: AppColors.primaryLight.withValues(alpha: 0.16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.lightbulb, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Planta sugerida para ti',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      suggestedPlant.name,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      suggestedPlant.scientificName,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildMetaChip(context, suggestedPlant.category.label, _getCategoryColor(suggestedPlant.category)),
+                        _buildMetaChip(context, suggestedPlant.lightRequirement.label, AppColors.primary),
+                        _buildMetaChip(context, suggestedPlant.wateringFrequency.label, AppColors.secondary),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.push('/my-plants/add?fromCatalog=${suggestedPlant.id}'),
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Añadir a mis plantas'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
 
         // Lista de resultados
         Expanded(
@@ -188,6 +253,23 @@ class QuizResultScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaChip(BuildContext context, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

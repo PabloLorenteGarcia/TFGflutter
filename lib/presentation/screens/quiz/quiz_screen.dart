@@ -12,13 +12,6 @@ class QuizScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<QuizProvider>(
       builder: (context, quizProvider, child) {
-        // Si el quiz está completado, mostrar resultados
-        if (quizProvider.isCompleted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/quiz/result');
-          });
-        }
-
         return Scaffold(
           appBar: AppBar(
             title: const Text('Identifica tu planta'),
@@ -119,9 +112,10 @@ class QuizScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: quizProvider.currentAnswer == null
                       ? null
-                      : () {
+                      : () async {
                           if (quizProvider.canFinish) {
-                            quizProvider.finishQuiz();
+                            await quizProvider.finishQuiz();
+                            context.go('/quiz/result');
                           } else {
                             quizProvider.nextQuestion();
                           }

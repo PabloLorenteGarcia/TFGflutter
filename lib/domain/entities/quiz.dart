@@ -159,40 +159,46 @@ class QuizData {
       ],
     ),
     QuizQuestion(
-      id: 'size',
-      question: '¿Qué tamaño tiene la planta?',
+      id: 'maintenance',
+      question: '¿Qué tan fácil quieres que sea cuidarla?',
       options: [
         QuizOption(
-          id: 'small',
-          text: 'Pequeña (menos de 30cm)',
+          id: 'easy',
+          text: 'Muy fácil, casi no quiero preocuparme',
         ),
         QuizOption(
           id: 'medium',
-          text: 'Mediana (30cm - 1m)',
+          text: 'Necesito algo equilibrado',
         ),
         QuizOption(
-          id: 'large',
-          text: 'Grande (más de 1m)',
+          id: 'careful',
+          text: 'Me gusta cuidar bien la planta',
         ),
       ],
     ),
     QuizQuestion(
-      id: 'location',
-      question: '¿Dónde está ubicada principalmente?',
+      id: 'space',
+      question: '¿Dónde vas a poner la planta?',
       options: [
         QuizOption(
           id: 'indoor',
-          text: 'Interior de casa',
+          text: 'Dentro de casa',
           matchingCategory: [PlantCategory.indoor],
         ),
         QuizOption(
-          id: 'outdoor',
-          text: 'Exterior (balcón / jardín)',
-          matchingCategory: [PlantCategory.outdoor, PlantCategory.tree],
+          id: 'balcony',
+          text: 'Balcón o terraza',
+          matchingCategory: [PlantCategory.outdoor, PlantCategory.flower, PlantCategory.herb],
         ),
         QuizOption(
-          id: 'window',
-          text: 'Cerca de una ventana',
+          id: 'garden',
+          text: 'Jardín o exterior',
+          matchingCategory: [PlantCategory.outdoor, PlantCategory.tree, PlantCategory.cactus],
+        ),
+        QuizOption(
+          id: 'bathroom',
+          text: 'Baño o cocina (zona húmeda)',
+          matchingHumidity: [HumidityLevel.high],
         ),
       ],
     ),
