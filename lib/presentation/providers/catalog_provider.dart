@@ -1,13 +1,21 @@
 import 'package:flutter/foundation.dart';
-import 'package:plantcare/data/repositories/firebase_catalog_repository.dart';
 import 'package:plantcare/core/constants/plant_catalog_data.dart';
+import 'package:plantcare/data/repositories/catalog_repository.dart';
+import 'package:plantcare/data/repositories/firebase_catalog_repository.dart';
 import 'package:plantcare/domain/entities/catalog_plant.dart';
 import 'package:plantcare/domain/entities/enums.dart';
 
 /// Provider para gestionar el estado del catálogo de plantas
 class CatalogProvider extends ChangeNotifier {
-  final FirebaseCatalogRepository _repository = FirebaseCatalogRepository();
-  
+  final FirebaseCatalogRepository _repository;
+  final CatalogRepository _localRepository;
+
+  CatalogProvider({
+    FirebaseCatalogRepository? repository,
+    CatalogRepository? localRepository,
+  })  : _repository = repository ?? FirebaseCatalogRepository(),
+        _localRepository = localRepository ?? CatalogRepository();
+
   List<CatalogPlant> _plants = [];
   List<CatalogPlant> _filteredPlants = [];
   PlantCategory? _selectedCategory;
@@ -30,31 +38,61 @@ class CatalogProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final defaultPlants = PlantCatalogData.getDefaultPlants();
+
     try {
-      _plants = await _repository.getAllPlants();
-      
-      // Si no hay plantas en Firestore, agregar las plantas iniciales
-      if (_plants.isEmpty) {
-        await _initializeDefaultPlants();
-        _plants = await _repository.getAllPlants();
+      var remotePlants = await _repository.getAllPlants();
+
+      if (remotePlants.isEmpty) {
+        try {
+          remotePlants = await _localRepository.getAllPlants();
+        } catch (_) {
+          remotePlants = [];
+        }
       }
-      
+
+      if (remotePlants.isEmpty) {
+        _plants = defaultPlants;
+        try {
+          await _repository.addPlants(defaultPlants);
+        } catch (_) {
+          // Se mantiene el fallback local por defecto si Firestore no responde.
+        }
+      } else {
+        _plants = remotePlants;
+
+        final existingIds = _plants.map((plant) => plant.id).toSet();
+        final missingDefaultPlants = defaultPlants
+            .where((plant) => !existingIds.contains(plant.id))
+            .toList();
+
+        if (missingDefaultPlants.isNotEmpty) {
+          _plants = [..._plants, ...missingDefaultPlants];
+          try {
+            await _repository.addPlants(missingDefaultPlants);
+          } catch (_) {
+            // Si no se puede sincronizar con Firestore, se conserva el catálogo cargado.
+          }
+        }
+      }
+
       _filteredPlants = _plants;
     } catch (e) {
-      _error = 'Error al cargar el catálogo: $e';
+      try {
+        _plants = await _localRepository.getAllPlants();
+      } catch (_) {
+        _plants = defaultPlants;
+      }
+
+      if (_plants.isEmpty) {
+        _plants = defaultPlants;
+      }
+
+      _filteredPlants = _plants;
+      _error = 'Se cargó una copia local del catálogo por un problema con Firestore.';
     } finally {
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  /// Inicializa las plantas por defecto en Firestore
-  Future<void> _initializeDefaultPlants() async {
-    try {
-      final defaultPlants = PlantCatalogData.getDefaultPlants();
-      await _repository.addPlants(defaultPlants);
-    } catch (e) {
-      _error = 'Error al inicializar plantas: $e';
     }
   }
 
