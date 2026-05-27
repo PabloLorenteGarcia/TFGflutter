@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:plantcare/domain/entities/enums.dart';
+import 'package:plantcare/core/constants/plant_catalog_data.dart';
 import 'package:plantcare/domain/entities/catalog_plant.dart';
 
 /// Clase para gestionar la base de datos SQLite
@@ -20,12 +20,28 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
+
+    await _ensureDefaultCatalogPlants(db);
+    return db;
+  }
+
+  Future<void> _ensureDefaultCatalogPlants(Database db) async {
+    final defaultPlants = PlantCatalogData.getDefaultPlants();
+    final existingRows = await db.query('catalog_plants', columns: ['id']);
+    final existingIds = existingRows.map((row) => row['id'] as String).toSet();
+
+    final missingPlants = defaultPlants.where((plant) => !existingIds.contains(plant.id)).toList();
+    if (missingPlants.isNotEmpty) {
+      for (final plant in missingPlants) {
+        await db.insert('catalog_plants', plant.toMap());
+      }
+    }
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -99,218 +115,7 @@ class DatabaseHelper {
   }
 
   Future<void> _insertDefaultCatalogPlants(Database db) async {
-    final defaultPlants = [
-      CatalogPlant(
-        id: 'cat_001',
-        name: 'Monstera',
-        scientificName: 'Monstera deliciosa',
-        category: PlantCategory.indoor,
-        description: 'Planta tropical de interior muy popular, conocida por sus hojas grandes con agujeros característicos.',
-        lightRequirement: LightRequirement.medium,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 15,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.high,
-        careTips: 'Limpia las hojas regularmente. Necesita soporte para trepar. Riégala cuando la tierra esté seca.',
-      ),
-      CatalogPlant(
-        id: 'cat_002',
-        name: 'Sansevieria',
-        scientificName: 'Sansevieria trifasciata',
-        category: PlantCategory.indoor,
-        description: 'Planta muy resistente, conocida como lengua de tigre o espada de San Jorge. Purifica el aire.',
-        lightRequirement: LightRequirement.low,
-        wateringFrequency: WateringFrequency.biweekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: 10,
-        maxTemp: 35,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Tolera neglecto. No regar en exceso. Perfecta para principiantes.',
-      ),
-      CatalogPlant(
-        id: 'cat_003',
-        name: 'Pothos',
-        scientificName: 'Epipremnum aureum',
-        category: PlantCategory.indoor,
-        description: 'Planta colgante muy fácil de cuidar. Perfecta para principiantes y purifica el aire.',
-        lightRequirement: LightRequirement.low,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 15,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.medium,
-        careTips: 'Pode las enredaderas largas. Tolera poca luz. Riégala cuando las hojas se vean ligeramente marchitas.',
-      ),
-      CatalogPlant(
-        id: 'cat_004',
-        name: 'Aloe Vera',
-        scientificName: 'Aloe barbadensis miller',
-        category: PlantCategory.succulent,
-        description: 'Planta suculenta medicinal conocida por sus propiedades calmantes y regeneradoras.',
-        lightRequirement: LightRequirement.high,
-        wateringFrequency: WateringFrequency.biweekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: 10,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Necesita mucho sol. Dejar secar la tierra entre riegos. No regar en exceso.',
-      ),
-      CatalogPlant(
-        id: 'cat_005',
-        name: 'Ficus Lyrata',
-        scientificName: 'Ficus lyrata',
-        category: PlantCategory.indoor,
-        description: 'Árbol de interior con grandes hojas en forma de violín. Muy decorativo.',
-        lightRequirement: LightRequirement.high,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 15,
-        maxTemp: 25,
-        humidityLevel: HumidityLevel.medium,
-        careTips: 'No mover una vez ubicada. Pulverizar las hojas. Evitar corrientes de aire.',
-      ),
-      CatalogPlant(
-        id: 'cat_006',
-        name: 'Espatifilo',
-        scientificName: 'Spathiphyllum',
-        category: PlantCategory.indoor,
-        description: 'Planta de interior con flores blancas. Excelente purificador de aire.',
-        lightRequirement: LightRequirement.low,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.high,
-        minTemp: 18,
-        maxTemp: 28,
-        humidityLevel: HumidityLevel.high,
-        careTips: 'Mantener tierra húmeda. Pulverizar regularmente. Florece con luz indirecta.',
-      ),
-      CatalogPlant(
-        id: 'cat_007',
-        name: 'Cactus',
-        scientificName: 'Cactaceae',
-        category: PlantCategory.cactus,
-        description: 'Plantas adaptadas a climas secos que almacenan agua en su tejido.',
-        lightRequirement: LightRequirement.direct,
-        wateringFrequency: WateringFrequency.monthly,
-        wateringAmount: WateringAmount.low,
-        minTemp: 5,
-        maxTemp: 40,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Mucho sol, poco agua. Asegurar drenaje. No regar en invierno.',
-      ),
-      CatalogPlant(
-        id: 'cat_008',
-        name: 'Lavanda',
-        scientificName: 'Lavandula',
-        category: PlantCategory.herb,
-        description: 'Planta aromática con flores moradas perfumadas. Ideal para exteriores.',
-        lightRequirement: LightRequirement.direct,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: -5,
-        maxTemp: 35,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Necesita sol directo. Podar después de floración. Resistente a sequías.',
-      ),
-      CatalogPlant(
-        id: 'cat_009',
-        name: 'Rosa',
-        scientificName: 'Rosa',
-        category: PlantCategory.flower,
-        description: 'Flor clásica conocida por su belleza y fragancia. Requiere cuidados específicos.',
-        lightRequirement: LightRequirement.direct,
-        wateringFrequency: WateringFrequency.everyTwoDays,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 0,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.medium,
-        careTips: 'Podar en invierno. Fertilizar en primavera. Controlar plagas.',
-      ),
-      CatalogPlant(
-        id: 'cat_010',
-        name: 'Hortensia',
-        scientificName: 'Hydrangea',
-        category: PlantCategory.flower,
-        description: 'Planta con grandes flores en esferas. El color depende del pH del suelo.',
-        lightRequirement: LightRequirement.medium,
-        wateringFrequency: WateringFrequency.everyTwoDays,
-        wateringAmount: WateringAmount.high,
-        minTemp: 5,
-        maxTemp: 25,
-        humidityLevel: HumidityLevel.high,
-        careTips: 'Mantener suelo húmedo. Cambiar color con sulfato de aluminio. sombra parcial.',
-      ),
-      CatalogPlant(
-        id: 'cat_011',
-        name: 'Bonsái',
-        scientificName: 'Various',
-        category: PlantCategory.tree,
-        description: 'Árbol miniaturizado cultivado en maceta. Arte tradicional japonés.',
-        lightRequirement: LightRequirement.medium,
-        wateringFrequency: WateringFrequency.everyTwoDays,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 5,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.medium,
-        careTips: 'Regar cuando la superficie esté seca. Podar regularmente. Necesita luz.',
-      ),
-      CatalogPlant(
-        id: 'cat_012',
-        name: 'Romero',
-        scientificName: 'Rosmarinus officinalis',
-        category: PlantCategory.herb,
-        description: 'Hierba aromática mediterránea muy usada en cocina.',
-        lightRequirement: LightRequirement.direct,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: -10,
-        maxTemp: 35,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Sol directo obligatorio. Resistente a sequías. Podar para mantener forma.',
-      ),
-      CatalogPlant(
-        id: 'cat_013',
-        name: 'Calathea',
-        scientificName: 'Calathea',
-        category: PlantCategory.indoor,
-        description: 'Planta de interior con hojas muy decorativas y patrones únicos.',
-        lightRequirement: LightRequirement.medium,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.medium,
-        minTemp: 18,
-        maxTemp: 28,
-        humidityLevel: HumidityLevel.high,
-        careTips: 'Alta humedad esencial. No exponer al sol directo. Hojas sensibles al cloro.',
-      ),
-      CatalogPlant(
-        id: 'cat_014',
-        name: 'Suculenta',
-        scientificName: 'Various',
-        category: PlantCategory.succulent,
-        description: 'Plantas que almacenan agua en sus hojas. Muy fáciles de cuidar.',
-        lightRequirement: LightRequirement.high,
-        wateringFrequency: WateringFrequency.biweekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: 5,
-        maxTemp: 35,
-        humidityLevel: HumidityLevel.low,
-        careTips: 'Mucha luz, poco agua. Tierra con drenaje. Evitar agua en las hojas.',
-      ),
-      CatalogPlant(
-        id: 'cat_015',
-        name: 'Orquídea',
-        scientificName: 'Phalaenopsis',
-        category: PlantCategory.flower,
-        description: 'Flor exótica elegante. La orquídea más común para interior.',
-        lightRequirement: LightRequirement.medium,
-        wateringFrequency: WateringFrequency.weekly,
-        wateringAmount: WateringAmount.low,
-        minTemp: 15,
-        maxTemp: 30,
-        humidityLevel: HumidityLevel.medium,
-        careTips: 'Luz indirecta. Regar por inmersión. No fertilizar en floración.',
-      ),
-    ];
+    final List<CatalogPlant> defaultPlants = PlantCatalogData.getDefaultPlants();
 
     for (final plant in defaultPlants) {
       await db.insert('catalog_plants', plant.toMap());

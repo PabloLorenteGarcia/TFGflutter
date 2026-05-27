@@ -1,7 +1,7 @@
 /// Constantes de la aplicación
 class AppConstants {
   // Nombre de la aplicación
-  static const String appName = 'PlantCare';
+  static const String appName = 'TusPlantitas';
   static const String appVersion = '1.0.0';
   
   // Rutas de navegación

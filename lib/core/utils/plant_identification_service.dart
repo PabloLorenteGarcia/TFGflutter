@@ -24,15 +24,34 @@ class IdentifiedSpecies {
     required this.probability,
   });
 
+  String get displayName {
+    if (commonNames.isNotEmpty) {
+      return commonNames.first;
+    }
+    return scientificName;
+  }
+
   factory IdentifiedSpecies.fromJson(Map<String, dynamic> json) {
+    final speciesRaw = json['species'];
+    final speciesData = speciesRaw is Map ? Map<String, dynamic>.from(speciesRaw) : <String, dynamic>{};
+
+    final genusRaw = speciesData['genus'];
+    final familyRaw = speciesData['family'];
+    final commonNamesRaw = speciesData['commonNames'];
+
+    final commonNames = <String>[];
+    if (commonNamesRaw is List) {
+      commonNames.addAll(commonNamesRaw.whereType<String>());
+    }
+
     return IdentifiedSpecies(
-      scientificName: json['species']['scientificNameWithoutAuthor'] ?? '',
-      scientificNameAuthorship: json['species']['scientificNameAuthorship'],
-      genus: json['species']['genus']?['scientificNameWithoutAuthor'],
-      family: json['species']['family']?['scientificNameWithoutAuthor'],
-      commonNames: List<String>.from(json['species']['commonNames'] ?? []),
-      score: json['score']?.toDouble() ?? 0.0,
-      probability: (json['score']?.toDouble() ?? 0.0) * 100,
+      scientificName: speciesData['scientificNameWithoutAuthor']?.toString() ?? '',
+      scientificNameAuthorship: speciesData['scientificNameAuthorship']?.toString(),
+      genus: genusRaw is Map ? genusRaw['scientificNameWithoutAuthor']?.toString() : null,
+      family: familyRaw is Map ? familyRaw['scientificNameWithoutAuthor']?.toString() : null,
+      commonNames: commonNames,
+      score: json['score'] is num ? (json['score'] as num).toDouble() : 0.0,
+      probability: json['score'] is num ? (json['score'] as num).toDouble() * 100 : 0.0,
     );
   }
 }
@@ -50,11 +69,22 @@ class PlantIdentificationResult {
   });
 
   factory PlantIdentificationResult.fromJson(Map<String, dynamic> json) {
+    final resultsRaw = json['results'];
+    final species = <IdentifiedSpecies>[];
+
+    if (resultsRaw is List) {
+      for (final result in resultsRaw) {
+        if (result is Map) {
+          species.add(IdentifiedSpecies.fromJson(Map<String, dynamic>.from(result)));
+        }
+      }
+    }
+
     return PlantIdentificationResult(
-      species: (json['results'] as List<dynamic>?)
-          ?.map((result) => IdentifiedSpecies.fromJson(result))
-          .toList() ?? [],
-      remainingRequests: json['remainingIdentificationRequests'] ?? 0,
+      species: species,
+      remainingRequests: json['remainingIdentificationRequests'] is int
+          ? json['remainingIdentificationRequests'] as int
+          : 0,
     );
   }
 
@@ -121,11 +151,15 @@ class PlantIdentificationService {
         'project': project,
       });
 
-      if (response.data != null && response.data['data'] != null) {
-        return PlantIdentificationResult.fromJson(response.data['data']);
-      } else {
-        return PlantIdentificationResult.error('Respuesta inválida del servidor');
+      final responseData = response.data;
+      if (responseData is Map && responseData['data'] != null) {
+        final data = responseData['data'];
+        if (data is Map) {
+          return PlantIdentificationResult.fromJson(Map<String, dynamic>.from(data));
+        }
       }
+
+      return PlantIdentificationResult.error('Respuesta inválida del servidor');
     } catch (e) {
       return PlantIdentificationResult.error('Error de conexión: $e');
     }

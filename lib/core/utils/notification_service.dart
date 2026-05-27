@@ -40,7 +40,7 @@ class NotificationService {
   /// Callback cuando se toca una notificación
   void _onNotificationTapped(NotificationResponse response) {
     // Aquí se puede navegar a la planta específica
-    developer.log('Notificación tocada: ${response.payload}', name: 'PlantCare');
+    developer.log('Notificación tocada: ${response.payload}', name: 'TusPlantitas');
   }
 
   /// Programa una notificación de riego

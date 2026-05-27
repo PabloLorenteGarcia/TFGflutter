@@ -81,7 +81,7 @@ class _PlantCareAppState extends State<PlantCareApp> {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return MaterialApp.router(
-            title: 'PlantCare',
+            title: 'TusPlantitas',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

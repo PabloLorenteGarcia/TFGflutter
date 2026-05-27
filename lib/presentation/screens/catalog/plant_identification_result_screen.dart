@@ -137,11 +137,26 @@ class PlantIdentificationResultScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      species.scientificName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          species.displayName,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (species.commonNames.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            species.scientificName,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   Container(

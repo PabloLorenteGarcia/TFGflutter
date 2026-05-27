@@ -59,15 +59,13 @@ class CatalogProvider extends ChangeNotifier {
           // Se mantiene el fallback local por defecto si Firestore no responde.
         }
       } else {
-        _plants = remotePlants;
+        _plants = _mergeWithDefaultPlants(remotePlants, defaultPlants);
 
-        final existingIds = _plants.map((plant) => plant.id).toSet();
-        final missingDefaultPlants = defaultPlants
-            .where((plant) => !existingIds.contains(plant.id))
-            .toList();
+        final missingDefaultPlants = _plants.length > remotePlants.length
+            ? _plants.sublist(remotePlants.length)
+            : <CatalogPlant>[];
 
         if (missingDefaultPlants.isNotEmpty) {
-          _plants = [..._plants, ...missingDefaultPlants];
           try {
             await _repository.addPlants(missingDefaultPlants);
           } catch (_) {
@@ -130,6 +128,18 @@ class CatalogProvider extends ChangeNotifier {
     _searchQuery = '';
     _filteredPlants = _plants;
     notifyListeners();
+  }
+
+  /// Combina las plantas cargadas con el catálogo por defecto
+  List<CatalogPlant> _mergeWithDefaultPlants(
+    List<CatalogPlant> plants,
+    List<CatalogPlant> defaultPlants,
+  ) {
+    final existingIds = plants.map((plant) => plant.id).toSet();
+    return [
+      ...plants,
+      ...defaultPlants.where((plant) => !existingIds.contains(plant.id)),
+    ];
   }
 
   /// Obtiene una planta del catálogo por su ID

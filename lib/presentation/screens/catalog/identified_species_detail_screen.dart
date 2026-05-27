@@ -18,7 +18,7 @@ class IdentifiedSpeciesDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(species.scientificName),
+        title: Text(species.displayName),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -30,11 +30,21 @@ class IdentifiedSpeciesDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    species.scientificName,
+                    species.displayName,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (species.commonNames.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      species.scientificName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                   if (species.scientificNameAuthorship != null) ...[
                     const SizedBox(height: 8),
                     Text(

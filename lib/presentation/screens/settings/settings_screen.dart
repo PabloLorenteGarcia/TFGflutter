@@ -50,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
               // Sección de información
               _buildSectionHeader(context, 'Información'),
               ListTile(
-                title: const Text('Acerca de PlantCare'),
+                title: const Text('Acerca de TusPlantitas'),
                 subtitle: const Text('Versión 1.0.0'),
                 trailing: const Icon(Icons.info_outline),
                 onTap: () => _showAboutDialog(context),
@@ -75,7 +75,7 @@ class SettingsScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  '🌱 PlantCare - Cuidando tus plantas con amor',
+                  '🌱 TusPlantitas - Cuidando tus plantas con amor',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
@@ -182,7 +182,7 @@ class SettingsScreen extends StatelessWidget {
           children: [
             Icon(Icons.local_florist, color: AppColors.primary),
             const SizedBox(width: 8),
-            const Text('PlantCare'),
+            const Text('TusPlantitas'),
           ],
         ),
         content: const Column(
@@ -192,12 +192,12 @@ class SettingsScreen extends StatelessWidget {
             Text('Versión 1.0.0'),
             SizedBox(height: 16),
             Text(
-              'PlantCare es una aplicación para gestionar el cuidado de tus plantas. '
+              'TusPlantitas es una aplicación para gestionar el cuidado de tus plantas. '
               'Registra tus plantas, recibe recordatorios de riego y descubre nuevas especies.',
             ),
             SizedBox(height: 16),
             Text(
-              '© 2026 PlantCare',
+              '© 2026 TusPlantitas',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ],
