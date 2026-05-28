@@ -4,14 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:plantcare/core/theme/app_theme.dart';
+import 'package:plantcare/core/utils/plant_identification_service.dart';
 import 'package:plantcare/domain/entities/enums.dart';
 import 'package:plantcare/domain/entities/plant.dart';
 import 'package:plantcare/presentation/providers/plant_provider.dart';
 import 'package:plantcare/presentation/providers/catalog_provider.dart';
-import 'package:plantcare/core/utils/plant_identification_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
 
 /// Pantalla para añadir una nueva planta
 class AddPlantScreen extends StatefulWidget {
@@ -43,11 +40,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   double _minTemp = 15;
   double _maxTemp = 25;
   bool _notificationsEnabled = true;
-
-  File? _selectedImage;
-  String? _uploadedImageUrl;
-  bool _isUploadingImage = false;
-  bool _isIdentifyingPlant = false;
 
   @override
   void initState() {
@@ -110,100 +102,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImage = File(pickedFile.path);
-      });
-    }
-  }
-
-  Future<void> _uploadImage(String plantId) async {
-    if (_selectedImage == null) return;
-
-    setState(() => _isUploadingImage = true);
-
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('plant_images')
-          .child('$plantId.jpg');
-
-      await storageRef.putFile(_selectedImage!);
-      final downloadUrl = await storageRef.getDownloadURL();
-
-      setState(() {
-        _uploadedImageUrl = downloadUrl;
-        _isUploadingImage = false;
-      });
-    } catch (e) {
-      setState(() => _isUploadingImage = false);
-      // Error will be handled in _savePlant if needed
-      rethrow;
-    }
-  }
-
-  Future<void> _identifyPlant() async {
-    if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecciona una imagen primero'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isIdentifyingPlant = true);
-
-    try {
-      final service = PlantIdentificationService();
-      final result = await service.identifyPlant(
-        images: [_selectedImage!],
-        organs: ['auto'], // Detección automática del órgano
-      );
-
-      setState(() => _isIdentifyingPlant = false);
-
-      if (result.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${result.error}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-        return;
-      }
-
-      // Navegar a la pantalla de resultados
-      final selectedSpecies = await context.push<IdentifiedSpecies>(
-        '/plant-identification-result',
-        extra: result,
-      );
-
-      // Si el usuario seleccionó una especie, rellenar los campos
-      if (selectedSpecies != null && mounted) {
-        setState(() {
-          _nameController.text = selectedSpecies.commonNames.isNotEmpty
-              ? selectedSpecies.commonNames.first
-              : selectedSpecies.scientificName;
-          _speciesController.text = selectedSpecies.scientificName;
-        });
-      }
-    } catch (e) {
-      setState(() => _isIdentifyingPlant = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al identificar la planta: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -245,56 +143,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                 }
                 return null;
               },
-            ),
-            const SizedBox(height: 16),
-
-            // Imagen
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Imagen (opcional)',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Seleccionar imagen'),
-                    ),
-                    const SizedBox(width: 12),
-                    if (_selectedImage != null)
-                      ElevatedButton.icon(
-                        onPressed: _isIdentifyingPlant ? null : _identifyPlant,
-                        icon: _isIdentifyingPlant
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.search),
-                        label: const Text('Identificar planta'),
-                      ),
-                  ],
-                ),
-                if (_selectedImage != null && !_isIdentifyingPlant)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Imagen seleccionada - puedes identificar la planta',
-                      style: TextStyle(color: AppColors.success),
-                    ),
-                  ),
-                if (_isIdentifyingPlant)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-              ],
             ),
             const SizedBox(height: 16),
 
@@ -553,30 +401,13 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     final plantId = const Uuid().v4();
     print('🌱 Creando planta: $plantId');
 
-    // Upload image if selected
-    if (_selectedImage != null) {
-      try {
-        await _uploadImage(plantId);
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al subir imagen: $e'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-        return;
-      }
-    }
-
     final plant = Plant(
       id: plantId,
       name: _nameController.text.trim(),
       species: _speciesController.text.trim().isNotEmpty 
           ? _speciesController.text.trim() 
           : null,
-      imagePath: _uploadedImageUrl, // Use uploaded URL
+      imagePath: null,
       location: _locationController.text.trim().isNotEmpty 
           ? _locationController.text.trim() 
           : null,

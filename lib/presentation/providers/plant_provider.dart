@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:plantcare/data/repositories/firebase_catalog_repository.dart';
 import 'package:plantcare/data/repositories/plant_repository.dart';
 import 'package:plantcare/domain/entities/plant.dart';
+import 'package:plantcare/core/utils/watering_reminder_service.dart';
 
 /// Provider para gestionar el estado de las plantas del usuario
 class PlantProvider extends ChangeNotifier {
@@ -116,6 +117,11 @@ class PlantProvider extends ChangeNotifier {
 
       _plants = mergedPlants.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      // Verificar plantas que necesitan riego y enviar notificaciones
+      if (_plants.isNotEmpty) {
+        await WateringReminderService().checkPlantsAndNotify(_plants);
+      }
     } catch (e) {
       _error = 'Error al cargar las plantas: $e';
     } finally {

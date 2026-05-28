@@ -6,6 +6,8 @@ import 'package:plantcare/core/constants/firebase_options.dart';
 import 'package:plantcare/core/theme/app_theme.dart';
 import 'package:plantcare/core/utils/app_router.dart';
 import 'package:plantcare/core/utils/notification_service.dart';
+import 'package:plantcare/core/utils/watering_reminder_service.dart';
+import 'package:plantcare/core/utils/fcm_service.dart';
 import 'package:plantcare/presentation/providers/auth_provider.dart';
 import 'package:plantcare/presentation/providers/plant_provider.dart';
 import 'package:plantcare/presentation/providers/catalog_provider.dart';
@@ -19,9 +21,13 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   print('✅ Firebase inicializado correctamente');
   
-  // Inicializar notificaciones
+  // Inicializar notificaciones locales
   await NotificationService().initialize();
-  print('✅ Notificaciones inicializadas');
+  print('✅ Notificaciones locales inicializadas');
+  
+  // Inicializar Firebase Cloud Messaging
+  await FCMService().initialize();
+  print('✅ Firebase Cloud Messaging inicializado');
   
   runApp(const PlantCareApp());
 }
@@ -50,6 +56,8 @@ class _PlantCareAppState extends State<PlantCareApp> {
     _authProvider.addListener(_onAuthChanged);
     if (_authProvider.isAuthenticated) {
       _plantProvider.setUserId(_authProvider.userId);
+      // Iniciar servicio de recordatorios de riego cuando el usuario está autenticado
+      WateringReminderService().startService();
     }
   }
 
@@ -65,6 +73,7 @@ class _PlantCareAppState extends State<PlantCareApp> {
   void dispose() {
     _authProvider.removeListener(_onAuthChanged);
     _authProvider.dispose();
+    WateringReminderService().dispose();
     super.dispose();
   }
 
